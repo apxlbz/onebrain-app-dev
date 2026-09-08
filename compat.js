@@ -264,6 +264,7 @@ async function routeGet(path) {
 }
 
 window.OB = {
+  sb,
   token: () => session?.access_token ?? null,
   async api(path, opts = {}) {
     if (!opts.method || opts.method === "GET") return await routeGet(path);

@@ -544,10 +544,125 @@ function wire() {
   });
 }
 
+// ------------------------------------------------- MCP catalog sources
+
+const mcpShort = (s) => (String(s).split('/').pop() || 'server')
+  .toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 24) || 'server';
+
+function mcpToolPick(tools, onPick) {
+  const box = $('mcp-tools');
+  if (!tools.length) {
+    $('mcp-out').textContent += ' — the server lists no tools.';
+    return;
+  }
+  box.innerHTML = tools.map((t) =>
+    `<button type="button" class="ghostpill" data-mtool="${esc(t.name)}"
+       title="${esc(t.description || '')}">${esc(t.name)}</button>`).join('');
+  $('mcp-toolpick').hidden = false;
+  box.querySelectorAll('[data-mtool]').forEach((b) =>
+    b.addEventListener('click', () => onPick(b.dataset.mtool)));
+}
+
+async function mcpStart({ slug, url }) {
+  const out = $('mcp-out');
+  $('mcp-toolpick').hidden = true;
+  out.textContent = 'Checking the server…';
+  const short = mcpShort(slug ||
+    new URL(url).hostname.replace(/^mcp\./, '').split('.')[0]);
+  try {
+    const res = await post('/v1/connections/mcp/start', {
+      slug: slug || '', url: url || '',
+      return_to: `${location.origin}${location.pathname}?mcp=${encodeURIComponent(short)}`,
+    });
+    if (res.auth === 'oauth') {
+      out.textContent = 'Handing you to the provider for consent…';
+      location.href = res.authorize_url;
+      return;
+    }
+    out.textContent = `${res.server?.name || 'Server'} is reachable — choose what to ingest.`;
+    mcpToolPick(res.tools || [], async (tool) => {
+      try {
+        const r = await post('/v1/connections/mcp', { slug: short, url: res.url, tool });
+        out.textContent = `Connected ${r.connected} — the backend polls it from the next sweep.`;
+        $('mcp-toolpick').hidden = true;
+        announce(`Connected ${r.connected}.`);
+      } catch (e) { out.textContent = `Failed: ${e.message || e}`; }
+    });
+  } catch (e) { out.textContent = `Failed: ${e.message || e}`; }
+}
+
+async function mcpSearch() {
+  const q = $('mcp-q').value.trim();
+  const box = $('mcp-results');
+  if (q.length < 2) { box.innerHTML = ''; return; }
+  const safe = q.replace(/[%,()]/g, ' ');
+  const { data } = await window.OB.sb.from('mcp_catalog')
+    .select('slug,title,description,auth')
+    .or(`title.ilike.%${safe}%,description.ilike.%${safe}%,slug.ilike.%${safe}%`)
+    .order('featured', { ascending: false }).limit(8);
+  box.innerHTML = (data || []).map((r) =>
+    `<button type="button" class="srccard" data-mslug="${esc(r.slug)}" style="width:100%;text-align:left;margin:4px 0">
+       <span class="srcname">${esc(r.title)}${r.auth === 'oauth' ? ' · OAuth' : r.auth === 'header' ? ' · token' : ''}</span>
+       <span class="srcwhat">${esc((r.description || '').slice(0, 140))}</span>
+     </button>`).join('')
+    || '<p class="fh">Nothing matches — try the URL box below.</p>';
+  box.querySelectorAll('[data-mslug]').forEach((b) =>
+    b.addEventListener('click', () => mcpStart({ slug: b.dataset.mslug })));
+}
+
+let mcpSearchTimer;
+async function wireMcp() {
+  $('mcp-q').addEventListener('input', () => {
+    clearTimeout(mcpSearchTimer);
+    mcpSearchTimer = setTimeout(() => mcpSearch().catch(() => {}), 250);
+  });
+  $('mcp-url-go').addEventListener('click', () => {
+    const u = $('mcp-url').value.trim();
+    if (u.startsWith('https://')) mcpStart({ url: u });
+    else $('mcp-out').textContent = 'Paste an https:// MCP server URL.';
+  });
+  try {
+    const { data } = await window.OB.sb.from('mcp_catalog')
+      .select('slug,title').eq('featured', true).order('title');
+    $('mcp-featured').innerHTML = (data || []).map((r) =>
+      `<button type="button" class="ghostpill" data-mslug="${esc(r.slug)}">${esc(r.title)}</button>`).join('');
+    $('mcp-featured').querySelectorAll('[data-mslug]').forEach((b) =>
+      b.addEventListener('click', () => mcpStart({ slug: b.dataset.mslug })));
+  } catch { /* catalog empty until first sync — search and URL still work */ }
+}
+
+async function handleMcpReturn() {
+  // The OAuth callback bounces here with ?mcp=<short-slug>; the connection
+  // already exists — what's left is choosing the ingestion tool.
+  const short = new URLSearchParams(location.search).get('mcp');
+  if (!short) return false;
+  history.replaceState(null, '', location.pathname);
+  state.step = 1;
+  steps.forEach((el, i) => { el.hidden = i !== 1; });
+  paintRail();
+  const provider = `mcp:${mcpShort(short)}`;
+  const out = $('mcp-out');
+  out.textContent = `${provider} connected — fetching its tools…`;
+  try {
+    const res = await post('/v1/connections/mcp/tools', { provider });
+    out.textContent = `${provider} connected — choose what to ingest.`;
+    mcpToolPick(res.tools || [], async (tool) => {
+      try {
+        const r = await post('/v1/connections/mcp/tool', { provider, tool });
+        out.textContent = `${provider} ingests via ${r.tool} — first sweep within a minute.`;
+        $('mcp-toolpick').hidden = true;
+        announce('Source connected.');
+      } catch (e) { out.textContent = `Failed: ${e.message || e}`; }
+    });
+  } catch (e) { out.textContent = `${provider}: ${e.message || e}`; }
+  return true;
+}
+
 async function boot() {
   wire();
   paintRail();
-  const returned = await handleConnectReturn();
+  wireMcp().catch(() => {});
+  const returned = (await handleConnectReturn()) || (await handleMcpReturn());
   let ob;
   try { ob = await refresh(); } catch { return; }   // 401 already redirected
   $('ob-domain').textContent = ob.org || '';

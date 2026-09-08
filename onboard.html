@@ -104,6 +104,34 @@
       </ol>
     </section>
 
+    <section class="wsteps reveal" id="mcp-more" aria-labelledby="mcp-title">
+      <h2 id="mcp-title">Hundreds more, via MCP</h2>
+      <p class="fh" style="margin-top:2px">Any remote MCP server can feed this
+        memory. Search the catalog &mdash; synced from the official MCP
+        Registry &mdash; or paste a server URL. OAuth servers ask for consent
+        once; OneBrain refreshes and rotates the tokens forever after.</p>
+      <div id="mcp-featured" class="mrow" style="flex-wrap:wrap;gap:6px"></div>
+      <div class="mrow">
+        <input id="mcp-q" class="fi" type="search"
+               placeholder="Search 1,200+ servers&hellip;"
+               aria-label="Search the MCP catalog" autocomplete="off" />
+      </div>
+      <div id="mcp-results" role="listbox" aria-label="Catalog results"></div>
+      <div class="mrow">
+        <input id="mcp-url" class="fi" type="url"
+               placeholder="or paste a server URL (https://&hellip;/mcp)"
+               aria-label="MCP server URL" spellcheck="false" autocomplete="off" />
+        <button type="button" class="ghostpill" id="mcp-url-go">Connect</button>
+      </div>
+      <p class="fh" id="mcp-out" role="status" aria-live="polite"></p>
+      <div id="mcp-toolpick" hidden>
+        <h3 style="margin:14px 0 4px">Choose what to ingest</h3>
+        <p class="fh" style="margin:0 0 8px">The tool OneBrain's backend will
+          poll on its normal cadence.</p>
+        <div id="mcp-tools" class="mrow" style="flex-wrap:wrap;gap:6px"></div>
+      </div>
+    </section>
+
     <div class="acts reveal">
       <button class="cta" data-next>Continue</button>
       <button class="textlink" data-back><span class="tl">Back</span></button>
@@ -182,6 +210,6 @@
    URL fragment, and module-land (supabase-js) may consume fragments. Stash
    it first so the wizard always receives it. */
 window.__ob_hash = location.hash;</script>
-<script type="module" src="./onboard.js?v=19"></script>
+<script type="module" src="./onboard.js?v=20"></script>
 </body>
 </html>

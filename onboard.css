@@ -341,6 +341,13 @@ button.textlink { background:none; border:none; cursor:pointer; padding:0; }
   white-space:pre-wrap; word-break:break-all; color:var(--color-bone-white); }
 .snip .ghostpill { height:32px; padding:0 14px; flex:none; }
 .snip[hidden] { display:none; }
+.wsteps .textlink { font-size:14px; color:var(--color-silver-mist); }
+.wsteps .textlink .tl { border-bottom:1px solid var(--color-ash-line); }
+a.ghostpill { text-decoration:none; }
+.harn { flex-wrap:wrap; margin:var(--u3) 0 var(--u3); }
+.harnpane[hidden] { display:none; }
+.harnpane .snip { margin-top:6px; }
+.wsteps .cta { text-decoration:none; }
 
 .donemark { width:64px; height:64px; margin:0 0 var(--u4);
   border-radius:50%; border:1px solid var(--color-deep-verdant);
@@ -402,6 +409,10 @@ button.textlink { background:none; border:none; cursor:pointer; padding:0; }
 .wlist .fh { margin-top:6px; }
 .wlist .ghostpill, .wlist .mrow { margin-top:12px; }
 a.ghostpill { text-decoration:none; }
+.harn { flex-wrap:wrap; margin:var(--u3) 0 var(--u3); }
+.harnpane[hidden] { display:none; }
+.harnpane .snip { margin-top:6px; }
+.wsteps .cta { text-decoration:none; }
 
 /* The platform group inside verify: same rows, different owner — the label is
    the hand-off. Steps under a failed row are the operator walkthrough. */

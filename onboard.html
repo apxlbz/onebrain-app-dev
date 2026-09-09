@@ -10,7 +10,7 @@
 <meta name="description" content="Name your organization, connect your sources, and verify everything works before you rely on it." />
 <link rel="stylesheet" href="./app.css?v=3" />
 <link rel="stylesheet" href="./home.css?v=3" />
-<link rel="stylesheet" href="./onboard.css?v=10" />
+<link rel="stylesheet" href="./onboard.css?v=12" />
 </head>
 <body class="home ob">
 
@@ -265,35 +265,75 @@
     <p class="lede reveal" id="donesum"></p>
 
     <section class="wsteps reveal" aria-labelledby="cc-title">
-      <h2 id="cc-title">Connect Claude Code to this memory</h2>
-      <p class="fh" style="margin-top:2px">Once per machine. From then on Claude
-        answers from what your team decided, with sources.</p>
-      <ol class="wlist">
-        <li><b>Add OneBrain.</b> In a terminal:
-          <div class="snip"><pre class="mono" id="cc-add" translate="no"></pre>
-            <button type="button" class="ghostpill" data-copy="cc-add">Copy</button></div>
-        </li>
-        <li><b>Sign in once.</b> Start <span class="mono" translate="no">claude</span>,
-          type <span class="mono" translate="no">/mcp</span>, choose
-          <b>onebrain</b>, and approve the Google sign-in that opens. It never
-          asks again on this machine.</li>
-        <li><b>Ask it something.</b> <em>&ldquo;What did we decide about
-          pricing?&rdquo;</em> &mdash; the answer comes from this memory, and
-          says where it came from.</li>
-        <li><b>Optional &mdash; automatic memory.</b> Hooks make Claude Code recall
-          before every prompt and remember after every session without being
-          asked. They need a personal token, which is shown once.
-          <div class="mrow" style="margin-top:10px">
-            <button type="button" class="ghostpill" id="cc-mint">Mint my token &amp; show the install command</button>
-          </div>
-          <div class="snip" id="cc-hooks" hidden><pre class="mono" id="cc-install" translate="no"></pre>
-            <button type="button" class="ghostpill" data-copy="cc-install">Copy</button></div>
-          <p class="fh" id="cc-out" role="status" aria-live="polite"></p>
-        </li>
-      </ol>
-      <p class="fh" style="margin:var(--u3) 0 0">Cursor, Claude Desktop or any other
-        MCP client takes the same address:
-        <b class="mono" id="cc-url" translate="no"></b></p>
+      <h2 id="cc-title">Connect your tools</h2>
+      <p class="fh" style="margin-top:2px">Every assistant you use gets this memory.
+        Nothing below asks you to sign in: each setup carries your personal
+        token, created just now and shown once. <button type="button" class="textlink" id="cc-mint"><span class="tl">Create a new token</span></button></p>
+      <p class="fh" id="cc-out" role="status" aria-live="polite"></p>
+
+      <div class="catfilters harn" role="tablist" aria-label="Your tool">
+        <button type="button" class="catfilter" role="tab" data-harn="code" aria-selected="true">Claude Code</button>
+        <button type="button" class="catfilter" role="tab" data-harn="desktop" aria-selected="false">Claude Desktop</button>
+        <button type="button" class="catfilter" role="tab" data-harn="web" aria-selected="false">claude.ai</button>
+        <button type="button" class="catfilter" role="tab" data-harn="cursor" aria-selected="false">Cursor</button>
+        <button type="button" class="catfilter" role="tab" data-harn="vscode" aria-selected="false">VS&nbsp;Code</button>
+        <button type="button" class="catfilter" role="tab" data-harn="windsurf" aria-selected="false">Windsurf</button>
+        <button type="button" class="catfilter" role="tab" data-harn="gemini" aria-selected="false">Gemini CLI</button>
+        <button type="button" class="catfilter" role="tab" data-harn="other" aria-selected="false">Anything else</button>
+      </div>
+
+      <div class="harnpane" data-harn="code" role="tabpanel">
+        <p class="fh">One line in Terminal. It adds OneBrain&rsquo;s tools to Claude
+          Code, turns on automatic memory (recall before every prompt, remember
+          after every session), and connects Claude Desktop on this Mac too.
+          Anything it touches is backed up first.</p>
+        <div class="snip"><pre class="mono" id="h-code" translate="no"></pre>
+          <button type="button" class="ghostpill" data-copy="h-code">Copy</button></div>
+        <p class="fh">Open Terminal with <span class="mono" translate="no">&#8984; Space</span>,
+          type <em>Terminal</em>, paste, press Return. Then ask Claude Code
+          <em>&ldquo;what did we decide about pricing?&rdquo;</em></p>
+      </div>
+      <div class="harnpane" data-harn="desktop" role="tabpanel" hidden>
+        <p class="fh">The Claude Code line above connects Claude Desktop as well.
+          Without it: in Claude Desktop open <b>Settings &rarr; Connectors &rarr;
+          Add custom connector</b>, paste this address, and approve the Google
+          sign-in once.</p>
+        <div class="snip"><pre class="mono" id="h-desktop" translate="no"></pre>
+          <button type="button" class="ghostpill" data-copy="h-desktop">Copy</button></div>
+      </div>
+      <div class="harnpane" data-harn="web" role="tabpanel" hidden>
+        <p class="fh">On claude.ai open <b>Settings &rarr; Connectors &rarr; Add custom
+          connector</b>, paste this address, and approve the Google sign-in once.</p>
+        <div class="snip"><pre class="mono" id="h-web" translate="no"></pre>
+          <button type="button" class="ghostpill" data-copy="h-web">Copy</button></div>
+      </div>
+      <div class="harnpane" data-harn="cursor" role="tabpanel" hidden>
+        <p class="fh">One click. Cursor opens and asks you to confirm.</p>
+        <div class="mrow" style="margin-top:0"><a class="cta" id="h-cursor" href="#">Add to Cursor</a></div>
+      </div>
+      <div class="harnpane" data-harn="vscode" role="tabpanel" hidden>
+        <p class="fh">One click. VS&nbsp;Code opens and asks you to confirm.</p>
+        <div class="mrow" style="margin-top:0"><a class="cta" id="h-vscode" href="#">Add to VS&nbsp;Code</a></div>
+      </div>
+      <div class="harnpane" data-harn="windsurf" role="tabpanel" hidden>
+        <p class="fh">In Windsurf open <b>Settings &rarr; Cascade &rarr; MCP servers &rarr;
+          Manage</b>, which opens <span class="mono" translate="no">mcp_config.json</span>.
+          Add this inside <span class="mono" translate="no">mcpServers</span>:</p>
+        <div class="snip"><pre class="mono" id="h-windsurf" translate="no"></pre>
+          <button type="button" class="ghostpill" data-copy="h-windsurf">Copy</button></div>
+      </div>
+      <div class="harnpane" data-harn="gemini" role="tabpanel" hidden>
+        <p class="fh">One line in Terminal.</p>
+        <div class="snip"><pre class="mono" id="h-gemini" translate="no"></pre>
+          <button type="button" class="ghostpill" data-copy="h-gemini">Copy</button></div>
+      </div>
+      <div class="harnpane" data-harn="other" role="tabpanel" hidden>
+        <p class="fh">Any MCP client that speaks streamable HTTP takes this address.
+          Send the header to skip sign-in; without it the client signs in with
+          Google once.</p>
+        <div class="snip"><pre class="mono" id="h-other" translate="no"></pre>
+          <button type="button" class="ghostpill" data-copy="h-other">Copy</button></div>
+      </div>
     </section>
 
     <p class="lede reveal" id="done-team" style="margin-top:var(--u5)"></p>
@@ -311,6 +351,6 @@
    URL fragment, and module-land (supabase-js) may consume fragments. Stash
    it first so the wizard always receives it. */
 window.__ob_hash = location.hash;</script>
-<script type="module" src="./onboard.js?v=27"></script>
+<script type="module" src="./onboard.js?v=29"></script>
 </body>
 </html>

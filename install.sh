@@ -188,6 +188,23 @@ json.dump(d, open(p, "w"), indent=2)
 PY
 say "✓ hooks registered in $CC  (Claude Code + Cowork)"
 
+# --- 3b) Claude Code MCP server: recall/remember tools, token-authenticated -----
+# The personal token stands in for the OAuth sign-in, so nothing asks for
+# consent later. Re-registering replaces an earlier entry.
+MCP_URL="${URL%/api}/mcp"
+if command -v claude >/dev/null 2>&1; then
+  claude mcp remove onebrain -s user >/dev/null 2>&1 || true
+  if claude mcp add --scope user --transport http onebrain "$MCP_URL" \
+       --header "Authorization: Bearer $TOKEN" >/dev/null 2>&1; then
+    say "✓ OneBrain tools added to Claude Code (no sign-in needed)"
+  else
+    say "• could not register OneBrain in Claude Code. Run by hand:"
+    say "    claude mcp add --transport http onebrain $MCP_URL --header 'Authorization: Bearer <your token>'"
+  fi
+else
+  say "• Claude Code CLI not found on PATH — its MCP registration was skipped (hooks are installed)."
+fi
+
 # --- 4) Claude Desktop MCP connector ---------------------------------------
 case "$(uname -s)" in
   Darwin) DESK="$HOME/Library/Application Support/Claude/claude_desktop_config.json" ;;
@@ -225,6 +242,6 @@ can't be automated) — paste this into Settings → Profile → custom instruct
   is already in OneBrain. Only fall back to Google tools if OneBrain returns nothing.
 
 Installed:
-  • Claude Code + Cowork — auto-recall + capture on every turn (machine-wide).
-  • Claude Desktop chat  — OneBrain tools connected; add the instruction above.
+  • Claude Code — OneBrain tools (recall, remember) + auto-recall and capture on every turn.
+  • Claude Desktop chat — OneBrain tools connected; add the instruction above.
 NOTE

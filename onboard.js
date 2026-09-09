@@ -128,7 +128,8 @@ function onEnter(i) {
 async function saveOrg() {
   await post('/v1/onboarding', {
     display_name: $('ob-name').value,
-    steps: { team: $('ob-team').value, goal: $('ob-goal').value.trim() },
+    steps: { ...((state.ob && state.ob.steps) || {}),
+             team: $('ob-team').value, goal: $('ob-goal').value.trim() },
   });
 }
 
@@ -285,7 +286,13 @@ function wireCards(root) {
   root.querySelectorAll('[data-mslug]').forEach((b) =>
     b.addEventListener('click', () => {
       b.querySelector('.srcstate').textContent = 'Checking\u2026';
-      mcpStart({ slug: b.dataset.mslug, card: b });
+      const provider = `mcp:${catShort(b.dataset.mslug)}`;
+      if (state.conns.some((c) => c.provider === provider)) {
+        // Already connected: fix what it reads, no second consent screen.
+        mcpRepair(provider, b.querySelector('.srcname').textContent.trim(), b);
+      } else {
+        mcpStart({ slug: b.dataset.mslug, card: b });
+      }
     }));
   loadLogos(root);
 }
@@ -696,13 +703,19 @@ async function runChecks() {
 
 // ------------------------------------------------------------------ step 4
 
-/* Done. Two things belong here and nothing else: the end-to-end path to
- * Claude Code on THIS machine (add, sign in, ask, optional hooks), and one
- * honest line about who else can get in. Invitations are not a wizard
- * concern — membership is by email domain, managed in Settings. */
+/* Done. Two things belong here and nothing else: the shortest honest path to
+ * Claude on THIS machine, and one line about who else can get in.
+ *
+ * A web page cannot write ~/.claude/settings.json, so the machine setup is a
+ * single pasted line — but it is ONE line, it needs no sign-in (the personal
+ * token rides along, and the MCP endpoint accepts it as a bearer), and it
+ * does everything: Claude Code tools, the auto-memory hooks, Claude Desktop.
+ * Cursor and VS Code take a click. Invitations are not a wizard concern —
+ * membership is by email domain, managed in Settings. */
 const MCP_URL = `${FN}/mcp`;
 const API_URL = `${FN}/api`;
 let doneWired = false;
+let doneToken = '';
 
 function orgLabel() {
   const typed = ($('ob-name').value || '').trim();
@@ -711,7 +724,49 @@ function orgLabel() {
   return org.startsWith('user:') ? 'Your memory' : (org || 'Your organization');
 }
 
-function renderDone() {
+const installLine = (token) =>
+  `curl -fsSL ${location.origin}/install.sh | ONEBRAIN_URL=${API_URL} ONEBRAIN_TOKEN=${token} bash`;
+
+/* Every harness, filled in. With a token each client is authenticated at
+ * once; without one (a return visit) the OAuth sign-in takes over. */
+function paintHarnesses(token) {
+  const tok = token || '<your personal token>';
+  const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+  $('h-code').textContent = installLine(tok);
+  $('h-desktop').textContent = MCP_URL;
+  $('h-web').textContent = MCP_URL;
+  $('h-cursor').href = 'cursor://anysphere.cursor-deeplink/mcp/install?name=onebrain&config='
+    + btoa(JSON.stringify({ url: MCP_URL, ...(headers ? { headers } : {}) }));
+  $('h-vscode').href = 'vscode:mcp/install?' + encodeURIComponent(JSON.stringify(
+    { name: 'onebrain', type: 'http', url: MCP_URL, ...(headers ? { headers } : {}) }));
+  $('h-windsurf').textContent = JSON.stringify({ onebrain: { serverUrl: MCP_URL,
+    ...(headers ? { headers } : {}) } }, null, 2).replace(/^\{\n|\n\}$/g, '');
+  $('h-gemini').textContent = `gemini mcp add --transport http onebrain ${MCP_URL}`
+    + (token ? ` --header "Authorization: Bearer ${tok}"` : '');
+  $('h-other').textContent = `${MCP_URL}\nAuthorization: Bearer ${tok}`;
+}
+
+function showLine(token, mintedAt) {
+  doneToken = token || '';
+  paintHarnesses(token);
+  $('cc-out').textContent = token
+    ? 'Your personal token is inside these. It is shown once — set up what you '
+      + 'use now; leaving this page hides it.'
+    : mintedAt
+      ? `Your token was created ${new Date(mintedAt).toLocaleDateString()} and is not `
+        + 'shown again. To set up another tool, create a new token — the old one stops working.'
+      : 'Create a token to get these filled in.';
+}
+
+async function mintToken() {
+  const res = await post('/v1/me/token');
+  const steps = { ...((state.ob && state.ob.steps) || {}), token_minted_at: new Date().toISOString() };
+  post('/v1/onboarding', { steps }).catch(() => {});
+  if (state.ob) state.ob.steps = steps;
+  return res.token;
+}
+
+async function renderDone() {
   const live = state.conns.filter((c) => c.status === 'ok').length;
   const name = orgLabel();
   $('donesum').textContent = live
@@ -719,10 +774,6 @@ function renderDone() {
       + 'starts collecting within the minute.'
     : `${name} is ready. Nothing is ingesting automatically yet — connect a source `
       + 'from Settings whenever you want it filled for you.';
-
-  $('cc-add').textContent = `claude mcp add --transport http onebrain ${MCP_URL}`;
-  $('cc-url').textContent = MCP_URL;
-
   const org = (state.ob && state.ob.org) || '';
   $('done-team').textContent = org.startsWith('user:')
     ? 'This memory is keyed to your personal address, so it is yours alone. '
@@ -733,9 +784,27 @@ function renderDone() {
 
   if (!doneWired) { doneWired = true; wireDone(); }
   post('/v1/onboarding', { complete: true }).catch(() => {});
+
+  /* First arrival: mint the token now, no button — the line must be ready
+   * to copy. A return visit never re-mints on its own, because a new token
+   * silently kills the one already installed on this person's machine. */
+  const mintedAt = state.ob && state.ob.steps && state.ob.steps.token_minted_at;
+  if (doneToken) { showLine(doneToken, mintedAt); return; }
+  if (mintedAt) { showLine('', mintedAt); return; }
+  $('cc-out').textContent = 'Creating your personal token\u2026';
+  try { showLine(await mintToken()); }
+  catch (e) {
+    showLine('', null);
+    $('cc-out').textContent = `Could not create your token: ${String(e.message || e).slice(0, 140)}`;
+  }
 }
 
 function wireDone() {
+  document.querySelectorAll('.harn [data-harn]').forEach((t) => t.addEventListener('click', () => {
+    document.querySelectorAll('.harn [data-harn]').forEach((x) =>
+      x.setAttribute('aria-selected', String(x === t)));
+    document.querySelectorAll('.harnpane').forEach((p) => { p.hidden = p.dataset.harn !== t.dataset.harn; });
+  }));
   document.querySelectorAll('[data-copy]').forEach((b) => b.addEventListener('click', async () => {
     const text = $(b.dataset.copy).textContent;
     try {
@@ -745,24 +814,12 @@ function wireDone() {
     } catch { announce('Copy failed — select the text instead.'); }
   }));
   $('cc-mint').addEventListener('click', async () => {
-    const btn = $('cc-mint'); const out = $('cc-out');
-    if (!confirm('Mint a personal token? Any previous token of yours stops working '
-                 + 'the moment this one is created.')) return;
-    btn.disabled = true; out.textContent = 'Minting\u2026';
-    try {
-      const res = await post('/v1/me/token');
-      $('cc-install').textContent =
-        `curl -fsSL ${location.origin}/install.sh | ONEBRAIN_URL=${API_URL} `
-        + `ONEBRAIN_TOKEN=${res.token} bash`;
-      $('cc-hooks').hidden = false;
-      out.textContent = 'Run that in a terminal. It writes the hooks into '
-        + '~/.claude/settings.json and backs up anything it touches. The token is '
-        + 'shown once — minting again replaces it.';
-      btn.textContent = 'Mint again';
-      announce('Token minted — shown once.');
-    } catch (e) {
-      out.textContent = `Could not mint a token: ${String(e.message || e).slice(0, 140)}`;
-    } finally { btn.disabled = false; }
+    const btn = $('cc-mint');
+    if (doneToken && !confirm('Create a new token? The one in the line above stops working.')) return;
+    btn.disabled = true;
+    try { showLine(await mintToken()); announce('New token created — shown once.'); }
+    catch (e) { $('cc-out').textContent = `Could not create a token: ${String(e.message || e).slice(0, 140)}`; }
+    finally { btn.disabled = false; }
   });
 }
 
@@ -1045,21 +1102,33 @@ async function handleMcpReturn() {
   paintRail();
   const provider = `mcp:${mcpShort(short)}`;
   const label = mcpShort(short).replace(/[-_]+/g, ' ').replace(/^./, (c) => c.toUpperCase());
-  const out = $('mcp-out');
-  out.textContent = `${label} connected \u2014 checking what it can hand back\u2026`;
   /* Not awaited: the live tool check can take seconds, and the step — with
    * its Continue — must be on screen and usable while it runs. */
-  (async () => {
-    try {
-      const res = await post('/v1/connections/mcp/tools', { provider });
-      out.textContent = '';
-      await mcpChoose({
-        label, tools: res.tools || [], current: res.current || null,
-        save: (tool, args) => post('/v1/connections/mcp/tool', { provider, tool, args }),
-      });
-    } catch (e) { out.textContent = `${label}: ${e.message || e}`; }
-  })();
+  mcpRepair(provider, label, null);
   return true;
+}
+
+/* An existing remote connection: (re)choose what it reads, verified live.
+ * Used on the OAuth return leg and when a connected card is clicked. */
+async function mcpRepair(provider, label, card) {
+  const out = $('mcp-out');
+  const st = card ? card.querySelector('.srcstate') : null;
+  out.textContent = `${label} connected \u2014 checking what it can hand back\u2026`;
+  try {
+    const res = await post('/v1/connections/mcp/tools', { provider });
+    out.textContent = '';
+    if (st) st.textContent = 'Choosing what to read\u2026';
+    await mcpChoose({
+      label, tools: res.tools || [],
+      /* A card was clicked because something is wrong: ignore the stored
+       * pick and choose again, verified. */
+      current: card ? null : (res.current || null),
+      save: (tool, args) => post('/v1/connections/mcp/tool', { provider, tool, args }),
+    });
+  } catch (e) {
+    out.textContent = `${label}: ${e.message || e}`;
+    if (st) st.textContent = String(e.message || e).slice(0, 80);
+  }
 }
 
 async function boot() {

@@ -284,6 +284,9 @@ window.OB = {
     // Remote (MCP) sources: start, tools, tool, and the authless finish all
     // live on the api function under the same paths.
     if (path.startsWith("/v1/connections/mcp")) return await fnCall(path, body);
+    // The danger zone: both are POSTs with the organization's name typed back.
+    if (path === "/v1/purge") return await fnCall("/v1/purge", body);
+    if (path === "/v1/reset") return await fnCall("/v1/reset", body);
     throw new Error(`this action isn't wired to the new engine yet (${path})`);
   },
   signout() { sb.auth.signOut().then(() => { location.href = "./index.html"; }); },

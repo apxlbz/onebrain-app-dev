@@ -991,14 +991,18 @@ async function handleMcpReturn() {
   const label = mcpShort(short).replace(/[-_]+/g, ' ').replace(/^./, (c) => c.toUpperCase());
   const out = $('mcp-out');
   out.textContent = `${label} connected \u2014 checking what it can hand back\u2026`;
-  try {
-    const res = await post('/v1/connections/mcp/tools', { provider });
-    out.textContent = '';
-    await mcpChoose({
-      label, tools: res.tools || [], current: res.current || null,
-      save: (tool, args) => post('/v1/connections/mcp/tool', { provider, tool, args }),
-    });
-  } catch (e) { out.textContent = `${label}: ${e.message || e}`; }
+  /* Not awaited: the live tool check can take seconds, and the step — with
+   * its Continue — must be on screen and usable while it runs. */
+  (async () => {
+    try {
+      const res = await post('/v1/connections/mcp/tools', { provider });
+      out.textContent = '';
+      await mcpChoose({
+        label, tools: res.tools || [], current: res.current || null,
+        save: (tool, args) => post('/v1/connections/mcp/tool', { provider, tool, args }),
+      });
+    } catch (e) { out.textContent = `${label}: ${e.message || e}`; }
+  })();
   return true;
 }
 
@@ -1007,6 +1011,11 @@ async function boot() {
   paintRail();
   wireCatalog();
   wireToolBox();
+  /* Reveal before any network round-trip. Everything marked .reveal starts
+   * invisible for its entrance, and on a return from a provider the first
+   * request can take seconds — a step with no visible Continue reads as
+   * broken, not as loading. */
+  document.querySelectorAll('.reveal, [data-words]').forEach((el) => el.classList.add('in'));
   const returned = (await handleConnectReturn()) || (await handleMcpReturn());
   let ob;
   try { ob = await refresh(); } catch { return; }   // 401 already redirected
@@ -1025,7 +1034,6 @@ async function boot() {
     if (ob.steps.team) $('ob-team').value = ob.steps.team;
     if (ob.steps.goal) $('ob-goal').value = ob.steps.goal;
   }
-  document.querySelectorAll('.reveal, [data-words]').forEach((el) => el.classList.add('in'));
   if (returned) renderSources();
 
   // Already finished? Say so rather than walking them through it again.

@@ -273,8 +273,7 @@
 
       <div class="catfilters harn" role="tablist" aria-label="Your tool">
         <button type="button" class="catfilter" role="tab" data-harn="code" aria-selected="true">Claude Code</button>
-        <button type="button" class="catfilter" role="tab" data-harn="desktop" aria-selected="false">Claude Desktop</button>
-        <button type="button" class="catfilter" role="tab" data-harn="web" aria-selected="false">claude.ai</button>
+        <button type="button" class="catfilter" role="tab" data-harn="claude" aria-selected="false">Claude app</button>
         <button type="button" class="catfilter" role="tab" data-harn="cursor" aria-selected="false">Cursor</button>
         <button type="button" class="catfilter" role="tab" data-harn="vscode" aria-selected="false">VS&nbsp;Code</button>
         <button type="button" class="catfilter" role="tab" data-harn="windsurf" aria-selected="false">Windsurf</button>
@@ -302,32 +301,30 @@
             pricing?&rdquo;</em></li>
         </ol>
       </div>
-      <div class="harnpane" data-harn="desktop" role="tabpanel" hidden>
-        <p class="fh">Claude Desktop connects from its own settings &mdash; no file,
-          no terminal. (The Claude Code line above connects it on this Mac as well.)</p>
+      <div class="harnpane" data-harn="claude" role="tabpanel" hidden>
+        <p class="fh">Connectors belong to your Claude account: add OneBrain once and
+          claude.ai, Claude Desktop and the mobile apps all have it. Two clicks in
+          Claude and one Google sign-in.</p>
+        <div class="mrow" style="margin-top:0;align-items:center">
+          <a class="cta" data-claude-open href="claude://claude.ai/customize/connectors">Open Claude Desktop<span class="ctaarrow" aria-hidden="true">&rarr;</span></a>
+          <a class="ghostpill" data-claude-open href="https://claude.ai/customize/connectors"
+             target="_blank" rel="noopener">or claude.ai in the browser</a>
+        </div>
+        <p class="fh" id="h-claude-out" role="status" aria-live="polite">Either button
+          also copies the address.</p>
         <ol class="wlist harnsteps">
-          <li>Copy this address.
-            <div class="snip"><pre class="mono" id="h-desktop" translate="no"></pre>
-              <button type="button" class="ghostpill" data-copy="h-desktop">Copy</button></div></li>
-          <li>In Claude Desktop open <b>Settings &rarr; Connectors &rarr; Add custom
-            connector</b>. Name it <b>OneBrain</b>, paste the address, press Add.</li>
-          <li>Press <b>Connect</b> and approve the Google sign-in once. That&rsquo;s it.</li>
+          <li>Press the button. Claude opens on its Connectors page, and the address
+            is on your clipboard.</li>
+          <li>Press <b>Add custom connector</b>, name it <b>OneBrain</b>, paste the
+            address, press <b>Add</b>.</li>
+          <li>Press <b>Connect</b> and approve the Google sign-in once. Claude Desktop
+            and mobile pick it up on their own.</li>
         </ol>
-        <details class="manual">
-          <summary>Or install it as an extension file</summary>
-          <p class="fh" style="margin-top:8px">A Claude Desktop extension built for
-            you, token inside: open the downloaded file and press Install.</p>
-          <div class="mrow" style="margin-top:0">
-            <button type="button" class="ghostpill" id="h-mcpb">Download OneBrain.mcpb</button>
-          </div>
-          <p class="fh" id="h-mcpb-out" role="status" aria-live="polite"></p>
-        </details>
-      </div>
-      <div class="harnpane" data-harn="web" role="tabpanel" hidden>
-        <p class="fh">On claude.ai open <b>Settings &rarr; Connectors &rarr; Add custom
-          connector</b>, paste this address, and approve the Google sign-in once.</p>
-        <div class="snip"><pre class="mono" id="h-web" translate="no"></pre>
-          <button type="button" class="ghostpill" data-copy="h-web">Copy</button></div>
+        <div class="snip"><pre class="mono" id="h-claude" translate="no"></pre>
+          <button type="button" class="ghostpill" data-copy="h-claude">Copy</button></div>
+        <p class="fh">On a Team or Enterprise plan an Owner adds it once under
+          <b>Organization settings &rarr; Connectors</b>, and everyone on the team
+          gets a Connect button.</p>
       </div>
       <div class="harnpane" data-harn="cursor" role="tabpanel" hidden>
         <p class="fh">One click. Cursor opens and asks you to confirm.</p>
@@ -373,6 +370,6 @@
    URL fragment, and module-land (supabase-js) may consume fragments. Stash
    it first so the wizard always receives it. */
 window.__ob_hash = location.hash;</script>
-<script type="module" src="./onboard.js?v=32"></script>
+<script type="module" src="./onboard.js?v=33"></script>
 </body>
 </html>

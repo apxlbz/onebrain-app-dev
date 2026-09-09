@@ -735,8 +735,7 @@ function paintHarnesses(token) {
   const tok = token || '<your personal token>';
   const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
   $('h-code').textContent = installLine(tok);
-  $('h-desktop').textContent = MCP_URL;
-  $('h-web').textContent = MCP_URL;
+  $('h-claude').textContent = MCP_URL;
   $('h-cursor').href = 'cursor://anysphere.cursor-deeplink/mcp/install?name=onebrain&config='
     + btoa(JSON.stringify({ url: MCP_URL, ...(headers ? { headers } : {}) }));
   $('h-vscode').href = 'vscode:mcp/install?' + encodeURIComponent(JSON.stringify(
@@ -746,99 +745,6 @@ function paintHarnesses(token) {
   $('h-gemini').textContent = `gemini mcp add --transport http onebrain ${MCP_URL}`
     + (token ? ` --header "Authorization: Bearer ${tok}"` : '');
   $('h-other').textContent = `${MCP_URL}\nAuthorization: Bearer ${tok}`;
-}
-
-/* The Claude Desktop extension, assembled here for this person.
- *
- * An .mcpb is a zip: manifest.json, the bridge server, an icon. The parts
- * live at /mcpb/ on this site; the page fetches them, fills in the address
- * and the personal token, zips them (stored entries — nothing to compress)
- * and hands the file over. Opening it in Claude Desktop is the install. */
-const CRC_TABLE = (() => {
-  const t = new Uint32Array(256);
-  for (let n = 0; n < 256; n++) {
-    let c = n;
-    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-    t[n] = c >>> 0;
-  }
-  return t;
-})();
-const crc32 = (u8) => {
-  let c = 0xffffffff;
-  for (let i = 0; i < u8.length; i++) c = CRC_TABLE[(c ^ u8[i]) & 0xff] ^ (c >>> 8);
-  return (c ^ 0xffffffff) >>> 0;
-};
-
-function zipStored(files) {
-  const enc = new TextEncoder();
-  const now = new Date();
-  const dosTime = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
-  const dosDate = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
-  const parts = []; const central = []; let offset = 0;
-  for (const f of files) {
-    const name = enc.encode(f.name); const crc = crc32(f.data); const n = f.data.length;
-    const lh = new DataView(new ArrayBuffer(30));
-    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true);
-    lh.setUint16(8, 0, true); lh.setUint16(10, dosTime, true); lh.setUint16(12, dosDate, true);
-    lh.setUint32(14, crc, true); lh.setUint32(18, n, true); lh.setUint32(22, n, true);
-    lh.setUint16(26, name.length, true); lh.setUint16(28, 0, true);
-    parts.push(new Uint8Array(lh.buffer), name, f.data);
-    const ch = new DataView(new ArrayBuffer(46));
-    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 0x0314, true); ch.setUint16(6, 20, true);
-    ch.setUint16(8, 0x0800, true); ch.setUint16(10, 0, true); ch.setUint16(12, dosTime, true);
-    ch.setUint16(14, dosDate, true); ch.setUint32(16, crc, true); ch.setUint32(20, n, true);
-    ch.setUint32(24, n, true); ch.setUint16(28, name.length, true); ch.setUint16(30, 0, true);
-    ch.setUint16(32, 0, true); ch.setUint16(34, 0, true); ch.setUint16(36, 0, true);
-    ch.setUint32(38, (f.mode || 0o644) << 16 >>> 0, true); ch.setUint32(42, offset, true);
-    central.push(new Uint8Array(ch.buffer), name);
-    offset += 30 + name.length + n;
-  }
-  const cdSize = central.reduce((t, p) => t + p.length, 0);
-  const eocd = new DataView(new ArrayBuffer(22));
-  eocd.setUint32(0, 0x06054b50, true); eocd.setUint16(4, 0, true); eocd.setUint16(6, 0, true);
-  eocd.setUint16(8, files.length, true); eocd.setUint16(10, files.length, true);
-  eocd.setUint32(12, cdSize, true); eocd.setUint32(16, offset, true); eocd.setUint16(20, 0, true);
-  return new Blob([...parts, ...central, new Uint8Array(eocd.buffer)], { type: 'application/octet-stream' });
-}
-
-async function buildMcpb(token) {
-  const get = async (path, kind) => {
-    const r = await fetch(`./mcpb/${path}?v=1`);
-    if (!r.ok) throw new Error(`could not fetch ${path} (${r.status})`);
-    return kind === 'bin' ? new Uint8Array(await r.arrayBuffer()) : await r.text();
-  };
-  const [manifest, server, icon] = await Promise.all([
-    get('manifest.json'), get('server/index.js'), get('icon.png', 'bin')]);
-  const enc = new TextEncoder();
-  const filled = manifest.replace(/__MCP_URL__/g, MCP_URL).replace(/__TOKEN__/g, token)
-    .replace(/__ORIGIN__/g, location.origin);
-  return zipStored([
-    { name: 'manifest.json', data: enc.encode(filled) },
-    { name: 'server/index.js', data: enc.encode(server), mode: 0o755 },
-    { name: 'icon.png', data: icon },
-  ]);
-}
-
-async function downloadMcpb() {
-  const btn = $('h-mcpb'); const out = $('h-mcpb-out');
-  if (!doneToken) {
-    out.textContent = 'This download carries your personal token, which is not shown '
-      + 'again. Create a new token first.';
-    return;
-  }
-  btn.disabled = true; out.textContent = 'Building your extension\u2026';
-  try {
-    const blob = await buildMcpb(doneToken);
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'OneBrain.mcpb'; document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    out.textContent = 'Downloaded OneBrain.mcpb. Open it (Downloads folder, or the '
-      + 'browser\u2019s download bar): Claude Desktop shows OneBrain \u2014 press Install. '
-      + 'The file holds your token; delete it once installed.';
-  } catch (e) {
-    out.textContent = `Could not build the extension: ${String(e.message || e).slice(0, 140)}`;
-  } finally { btn.disabled = false; }
 }
 
 function showLine(token, mintedAt) {
@@ -900,7 +806,15 @@ function wireDone() {
       x.setAttribute('aria-selected', String(x === t)));
     document.querySelectorAll('.harnpane').forEach((p) => { p.hidden = p.dataset.harn !== t.dataset.harn; });
   }));
-  $('h-mcpb').addEventListener('click', downloadMcpb);
+  /* Claude Desktop registers the claude:// scheme and routes
+   * claude://claude.ai/customize/connectors to its Connectors page; the https
+   * twin does the same on claude.ai. Either press also puts the address on
+   * the clipboard, so the only thing left in Claude is Add and paste. */
+  document.querySelectorAll('[data-claude-open]').forEach((a) => a.addEventListener('click', () => {
+    navigator.clipboard.writeText(MCP_URL).then(
+      () => { $('h-claude-out').textContent = 'Address copied — in Claude, press “Add custom connector” and paste it.'; },
+      () => { $('h-claude-out').textContent = 'Copy the address below, then paste it into “Add custom connector”.'; });
+  }));
   document.querySelectorAll('[data-copy]').forEach((b) => b.addEventListener('click', async () => {
     const text = $(b.dataset.copy).textContent;
     try {

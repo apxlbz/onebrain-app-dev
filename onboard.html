@@ -10,7 +10,7 @@
 <meta name="description" content="Name your organization, connect your sources, and verify everything works before you rely on it." />
 <link rel="stylesheet" href="./app.css?v=3" />
 <link rel="stylesheet" href="./home.css?v=3" />
-<link rel="stylesheet" href="./onboard.css?v=6" />
+<link rel="stylesheet" href="./onboard.css?v=7" />
 </head>
 <body class="home ob">
 
@@ -179,11 +179,20 @@
     </section>
 
     <p class="fh" id="mcp-out" role="status" aria-live="polite"></p>
-    <div id="mcp-toolpick" class="wsteps" hidden>
-      <h2 style="font-size:18px;margin:0 0 4px">Choose what to ingest</h2>
-      <p class="fh" style="margin:0 0 8px">The tool OneBrain&rsquo;s backend will
-        poll on its normal cadence.</p>
-      <div id="mcp-tools" class="mrow" style="flex-wrap:wrap;gap:6px;margin-top:0"></div>
+    <div id="mcp-toolpick" class="wsteps mtp" hidden>
+      <h2 id="mtp-title">Connected</h2>
+      <p class="fh" id="mtp-sum"></p>
+      <details class="manual" id="mtp-adv">
+        <summary id="mtp-adv-label">Change what OneBrain reads</summary>
+        <p class="fh" style="margin-top:8px">Each option is something the service can
+          hand back. OneBrain reads it on every sweep and turns what comes back
+          into facts.</p>
+        <div class="mrow">
+          <select id="mtp-select" class="fi" aria-label="What OneBrain reads"></select>
+          <button type="button" class="ghostpill" id="mtp-save">Use this</button>
+        </div>
+        <p class="fh" id="mtp-out" role="status" aria-live="polite"></p>
+      </details>
     </div>
 
     <details class="manual reveal" id="cat-advanced">
@@ -277,6 +286,6 @@
    URL fragment, and module-land (supabase-js) may consume fragments. Stash
    it first so the wizard always receives it. */
 window.__ob_hash = location.hash;</script>
-<script type="module" src="./onboard.js?v=24"></script>
+<script type="module" src="./onboard.js?v=25"></script>
 </body>
 </html>

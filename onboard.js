@@ -778,18 +778,122 @@ function wire() {
 const mcpShort = (s) => (String(s).split('/').pop() || 'server')
   .toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 24) || 'server';
 
-function mcpToolPick(tools, onPick) {
-  const box = $('mcp-tools');
+/* Choosing what a remote source feeds us.
+ *
+ * A server lists everything it can do — create pages, upload files, get
+ * users — and almost none of it is "hand me the content". The person
+ * connecting should not have to know which of 27 tool names is the one
+ * that reads. So: rank the reading tools (list, then search, then fetch;
+ * ones that need no arguments first), try the best one for real, and only
+ * fall back to asking when nothing answered. The server refuses any pick
+ * that does not answer a live call, so "verified" here is measured. */
+
+const WRITE_VERB = /(create|update|delete|remove|move|duplicate|upload|download|convert|archive|restore|write|post|send|add|set|edit|rename|patch|insert|put|trigger|run|execute|assign|invite|cancel|complete|submit|publish|import|export|sync)/i;
+const NOT_CONTENT = /(user|users|team|teams|member|members|async|attachment|skill|file|folder|schema|meta|whoami|ping|health)/i;
+const READ_RANK = [/list/i, /search/i, /query/i, /recent|latest|feed|timeline|history|changes/i, /fetch|get|read|retrieve|find|show/i];
+
+function rankTools(tools) {
+  const body = (t) => t.name.replace(/^[a-z0-9]+[-_.]/i, '');   // drop a vendor prefix
+  const readable = tools.filter((t) => !WRITE_VERB.test(body(t)) && !NOT_CONTENT.test(body(t)));
+  const pool = readable.length ? readable : tools;
+  const score = (t) => {
+    const i = READ_RANK.findIndex((r) => r.test(body(t)));
+    return (i < 0 ? 9 : i) + ((t.required || []).length ? 0.5 : 0);
+  };
+  return { ranked: pool.slice().sort((x, y) => score(x) - score(y)), readable };
+}
+
+/* Arguments a reading tool insists on, filled with the widest net we can
+ * cast: an empty query, a generous limit. Anything else is left for the
+ * server to reject — which it does, out loud. */
+function defaultArgs(t) {
+  const args = {};
+  for (const r of (t.required || [])) {
+    if (/query|^q$|search|text|term|keyword|filter/i.test(r)) args[r] = '';
+    else if (/limit|max|count|size|top|per_page/i.test(r)) args[r] = 50;
+    else if (/page|offset|cursor|start/i.test(r)) args[r] = 0;
+  }
+  return args;
+}
+
+const nice = (name) => String(name).replace(/^[a-z0-9]+[-_.]/i, '').replace(/[-_.]+/g, ' ');
+
+/* `save(tool, args)` is the write path for this connection (authless finish
+ * or the tool endpoint); it resolves with {items} or throws with the
+ * server's reason. Tries the ranked candidates in turn. */
+async function mcpChoose({ label, tools, save, recipe, current }) {
+  const box = $('mcp-toolpick');
+  const title = $('mtp-title'); const sum = $('mtp-sum');
+  const sel = $('mtp-select'); const out = $('mtp-out'); const adv = $('mtp-adv');
+  box.hidden = false;
+  title.textContent = `${label} is connected`;
+  adv.open = false; out.textContent = '';
   if (!tools.length) {
-    $('mcp-out').textContent += ' — the server lists no tools, so there is nothing to ingest.';
+    sum.textContent = `${label} lists nothing OneBrain can read, so nothing will be ingested from it.`;
+    adv.hidden = true;
     return;
   }
-  box.innerHTML = tools.map((t) =>
-    `<button type="button" class="ghostpill" data-mtool="${esc(t.name)}"
-       title="${esc(t.description || '')}">${esc(t.name)}</button>`).join('');
-  $('mcp-toolpick').hidden = false;
-  box.querySelectorAll('[data-mtool]').forEach((b) =>
-    b.addEventListener('click', () => onPick(b.dataset.mtool)));
+  const { ranked, readable } = rankTools(tools);
+  const byName = Object.fromEntries(tools.map((t) => [t.name, t]));
+  mtpSave = { save, byName };
+  sel.innerHTML = (readable.length && readable.length < tools.length
+    ? `<optgroup label="Reads content">${ranked.map((t) => `<option value="${esc(t.name)}">${esc(nice(t.name))}${t.description ? ` \u2014 ${esc(t.description.slice(0, 70))}` : ''}</option>`).join('')}</optgroup>`
+      + `<optgroup label="Everything else the service offers">${tools.filter((t) => !readable.includes(t)).map((t) => `<option value="${esc(t.name)}">${esc(nice(t.name))}</option>`).join('')}</optgroup>`
+    : ranked.map((t) => `<option value="${esc(t.name)}">${esc(nice(t.name))}${t.description ? ` \u2014 ${esc(t.description.slice(0, 70))}` : ''}</option>`).join(''));
+  adv.hidden = false;
+  box.scrollIntoView({ behavior: reduced.matches ? 'auto' : 'smooth', block: 'nearest' });
+
+  const settle = (tool, items) => {
+    sel.value = tool;
+    sum.innerHTML = `OneBrain reads it through <b class="mono" translate="no">${esc(nice(tool))}</b>`
+      + (items != null ? ` \u2014 ${items} item${items === 1 ? '' : 's'} on the first read.` : '.')
+      + ' Facts reach the dashboard within a minute of each sweep.';
+    announce(`${label} connected.`);
+  };
+
+  // Already reading (a recipe applied server-side): confirm, offer to change.
+  if (current?.tool) { settle(current.tool, null); return; }
+
+  const candidates = recipe?.tool ? [{ tool: recipe.tool, args: recipe.args || {} }] : [];
+  for (const t of ranked.slice(0, 3)) {
+    if (!candidates.some((c) => c.tool === t.name)) candidates.push({ tool: t.name, args: defaultArgs(t) });
+  }
+  const errors = [];
+  for (const c of candidates) {
+    sum.textContent = `Checking what it can hand back \u2014 trying ${nice(c.tool)}\u2026`;
+    try {
+      const r = await save(c.tool, c.args);
+      settle(c.tool, r?.items);
+      try { await refresh(); } catch { /* render what we have */ }
+      renderSources();
+      return;
+    } catch (e) { errors.push(`${nice(c.tool)}: ${String(e.message || e).slice(0, 120)}`); }
+  }
+  // Nothing answered on its own — ask, with the reasons in view.
+  sum.textContent = `${label} is connected, but none of its reading tools answered without help. Pick one below.`;
+  adv.open = true;
+  out.textContent = errors.join(' \u00b7 ');
+
+}
+
+/* The "Use this" button, wired once: whichever connection is currently in
+ * the box is what it saves to. */
+let mtpSave = null;
+function wireToolBox() {
+  $('mtp-save').addEventListener('click', async () => {
+    if (!mtpSave) return;
+    const sel = $('mtp-select'); const out = $('mtp-out'); const btn = $('mtp-save');
+    const tool = sel.value; const t = mtpSave.byName[tool] || { name: tool, required: [] };
+    btn.disabled = true; out.textContent = `Trying ${nice(tool)}\u2026`;
+    try {
+      const r = await mtpSave.save(tool, defaultArgs(t));
+      out.textContent = `Now reading through ${nice(tool)}${r?.items != null ? ` \u2014 ${r.items} item${r.items === 1 ? '' : 's'} on the first read` : ''}.`;
+      $('mtp-sum').innerHTML = `OneBrain reads it through <b class="mono" translate="no">${esc(nice(tool))}</b>. Facts reach the dashboard within a minute of each sweep.`;
+      try { await refresh(); } catch { /* render what we have */ }
+      renderSources();
+    } catch (e) { out.textContent = `${nice(tool)}: ${String(e.message || e).slice(0, 160)}`; }
+    btn.disabled = false;
+  });
 }
 
 async function mcpStart({ slug, url, card }) {
@@ -813,19 +917,20 @@ async function mcpStart({ slug, url, card }) {
       location.href = res.authorize_url;
       return;
     }
-    out.textContent = `${res.server?.name || 'Server'} is reachable — choose what to ingest.`;
-    say('Reachable \u2014 choose what to ingest below');
-    mcpToolPick(res.tools || [], async (tool) => {
-      try {
-        const r = await post('/v1/connections/mcp', { slug: short, url: res.url, tool });
-        out.textContent = `Connected ${r.connected} — the backend polls it from the next sweep.`;
-        $('mcp-toolpick').hidden = true;
-        announce(`Connected ${r.connected}.`);
-        try { await refresh(); } catch { /* render what we have */ }
-        renderSources();
-      } catch (e) { out.textContent = `Failed: ${e.message || e}`; say(String(e.message || e).slice(0, 80)); }
+    const label = res.server?.name || (card ? card.querySelector('.srcname').textContent.trim() : short);
+    out.textContent = `${label} is reachable.`;
+    say('Reachable \u2014 checking what it can hand back');
+    await mcpChoose({
+      label, tools: res.tools || [], recipe: res.recipe || null,
+      save: async (tool, args) => {
+        const r = await post('/v1/connections/mcp', {
+          slug: short, url: res.url, tool, args,
+          ...(res.recipe?.tool === tool && res.recipe?.since_arg ? { since_arg: res.recipe.since_arg } : {}),
+        });
+        out.textContent = `Connected ${r.connected}.`;
+        return r;
+      },
     });
-    $('mcp-toolpick').scrollIntoView({ behavior: reduced.matches ? 'auto' : 'smooth', block: 'nearest' });
   } catch (e) {
     out.textContent = `Failed: ${e.message || e}`;
     say(String(e.message || e).slice(0, 80));
@@ -883,20 +988,17 @@ async function handleMcpReturn() {
   steps.forEach((el, i) => { el.hidden = i !== STEP.sources; });
   paintRail();
   const provider = `mcp:${mcpShort(short)}`;
+  const label = mcpShort(short).replace(/[-_]+/g, ' ').replace(/^./, (c) => c.toUpperCase());
   const out = $('mcp-out');
-  out.textContent = `${provider} connected — fetching its tools…`;
+  out.textContent = `${label} connected \u2014 checking what it can hand back\u2026`;
   try {
     const res = await post('/v1/connections/mcp/tools', { provider });
-    out.textContent = `${provider} connected — choose what to ingest.`;
-    mcpToolPick(res.tools || [], async (tool) => {
-      try {
-        const r = await post('/v1/connections/mcp/tool', { provider, tool });
-        out.textContent = `${provider} ingests via ${r.tool} — first sweep within a minute.`;
-        $('mcp-toolpick').hidden = true;
-        announce('Source connected.');
-      } catch (e) { out.textContent = `Failed: ${e.message || e}`; }
+    out.textContent = '';
+    await mcpChoose({
+      label, tools: res.tools || [], current: res.current || null,
+      save: (tool, args) => post('/v1/connections/mcp/tool', { provider, tool, args }),
     });
-  } catch (e) { out.textContent = `${provider}: ${e.message || e}`; }
+  } catch (e) { out.textContent = `${label}: ${e.message || e}`; }
   return true;
 }
 
@@ -904,6 +1006,7 @@ async function boot() {
   wire();
   paintRail();
   wireCatalog();
+  wireToolBox();
   const returned = (await handleConnectReturn()) || (await handleMcpReturn());
   let ob;
   try { ob = await refresh(); } catch { return; }   // 401 already redirected

@@ -288,6 +288,14 @@ button.textlink { background:none; border:none; cursor:pointer; padding:0; }
 .mrow { display:flex; gap:var(--u2); flex-wrap:wrap; margin-top:var(--u3); }
 .mrow .fi { flex:1 1 190px; width:auto; height:44px; }
 
+/* The "what does it read" box after a remote source connects. */
+.mtp h2 { font-size:20px; }
+.mtp .fh b.mono { font-weight:500; color:var(--color-bone-white); }
+.mtp .manual { margin-top:var(--u3); }
+.mtp select.fi { flex:1 1 260px; width:auto; height:44px; padding-right:40px;
+  background-position:calc(100% - 22px) 19px, calc(100% - 16px) 19px; }
+.mtp[hidden] { display:none; }
+
 /* --------------------------------------------------------------- verify */
 
 .vpanel { border:1px solid var(--color-ash-line); border-radius:24px;

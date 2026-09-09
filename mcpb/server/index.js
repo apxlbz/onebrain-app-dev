@@ -22,6 +22,34 @@ function emit(text) {
   for (const x of Array.isArray(m) ? m : [m]) reply(x);
 }
 
+const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
+
+/* One POST, with patience: the endpoint is a serverless function, and the
+ * first request after a quiet spell can meet a cold start that answers 5xx
+ * or drops. Claude Desktop sends "initialize" the moment it launches, so
+ * that first request is exactly the one most likely to hit it. */
+async function post(line) {
+  let last;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    if (attempt) await sleep(600 * 2 ** (attempt - 1));
+    try {
+      const r = await fetch(URL_, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json, text/event-stream',
+          Authorization: `Bearer ${TOKEN}`,
+          ...(sessionId ? { 'Mcp-Session-Id': sessionId } : {}),
+        },
+        body: line,
+      });
+      if (r.status >= 500 && attempt < 3) { last = new Error(`HTTP ${r.status}`); continue; }
+      return r;
+    } catch (e) { last = e; }
+  }
+  throw last;
+}
+
 async function handle(line) {
   let msg;
   try { msg = JSON.parse(line); } catch { return; }
@@ -31,16 +59,7 @@ async function handle(line) {
     return;
   }
   try {
-    const r = await fetch(URL_, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json, text/event-stream',
-        Authorization: `Bearer ${TOKEN}`,
-        ...(sessionId ? { 'Mcp-Session-Id': sessionId } : {}),
-      },
-      body: line,
-    });
+    const r = await post(line);
     const sid = r.headers.get('mcp-session-id');
     if (sid) sessionId = sid;
     if (r.status === 202 || r.status === 204) return;          // a notification, acknowledged

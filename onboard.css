@@ -177,8 +177,8 @@ button.textlink { background:none; border:none; cursor:pointer; padding:0; }
   font-size:11px; letter-spacing:.08em; text-transform:uppercase;
   transition:background-color 160ms ease, color 160ms ease; }
 .catfilter:hover { color:var(--color-bone-white); }
-.catfilter[aria-pressed="true"] { background:var(--color-bone-white);
-  color:var(--color-void); }
+.catfilter[aria-pressed="true"], .catfilter[aria-selected="true"] {
+  background:var(--color-bone-white); color:var(--color-void); }
 .catfilter:focus-visible { outline:2px solid var(--color-electric-iris);
   outline-offset:2px; }
 
@@ -347,6 +347,15 @@ a.ghostpill { text-decoration:none; }
 .harn { flex-wrap:wrap; margin:var(--u3) 0 var(--u3); }
 .harnpane[hidden] { display:none; }
 .harnpane .snip { margin-top:6px; }
+/* The Claude Code line as a terminal window (the landing page's), left-set
+   inside the box; the steps under it in the same numbered voice as Welcome. */
+.harnpane .term { margin:var(--u3) 0; max-width:none; }
+.harnpane .snippet code { white-space:pre-wrap; word-break:break-all; }
+.harnsteps { margin-top:var(--u3); }
+.harnsteps > li { font-size:14px; line-height:1.5; }
+.harnsteps > li:first-child { border-top:0; padding-top:4px; }
+.harnsteps > li:first-child::before { top:4px; }
+.harnsteps .snip { margin-top:8px; }
 .wsteps .cta { text-decoration:none; }
 
 .donemark { width:64px; height:64px; margin:0 0 var(--u4);
@@ -412,6 +421,15 @@ a.ghostpill { text-decoration:none; }
 .harn { flex-wrap:wrap; margin:var(--u3) 0 var(--u3); }
 .harnpane[hidden] { display:none; }
 .harnpane .snip { margin-top:6px; }
+/* The Claude Code line as a terminal window (the landing page's), left-set
+   inside the box; the steps under it in the same numbered voice as Welcome. */
+.harnpane .term { margin:var(--u3) 0; max-width:none; }
+.harnpane .snippet code { white-space:pre-wrap; word-break:break-all; }
+.harnsteps { margin-top:var(--u3); }
+.harnsteps > li { font-size:14px; line-height:1.5; }
+.harnsteps > li:first-child { border-top:0; padding-top:4px; }
+.harnsteps > li:first-child::before { top:4px; }
+.harnsteps .snip { margin-top:8px; }
 .wsteps .cta { text-decoration:none; }
 
 /* The platform group inside verify: same rows, different owner — the label is

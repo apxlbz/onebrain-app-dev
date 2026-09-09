@@ -9,14 +9,16 @@
 #
 # Idempotent. Backs up any file it edits. Needs: bash, python3, curl, jq.
 #
-# Usage (the setup wizard and Settings print this line filled in for you):
-#   curl -fsSL https://<your onebrain site>/install.sh \
-#     | ONEBRAIN_URL=https://<project>.supabase.co/functions/v1/api \
-#       ONEBRAIN_TOKEN=<personal token> bash
-# or run with no env and it prompts.
+# Usage (the setup wizard prints this line filled in for you):
+#   curl -fsSL https://<your onebrain site>/install.sh | bash -s -- <personal token>
+# The site's copy of this file carries its environment's API address; from
+# the repo, pass it: ... | bash -s -- <token> https://<project>.supabase.co/functions/v1/api
+# (or set ONEBRAIN_URL / ONEBRAIN_TOKEN). With nothing given it prompts.
 set -euo pipefail
 
-URL_DEFAULT=""
+# Filled in by the sync that publishes this file to each site.
+URL_DEFAULT="https://epjkzltwyfexiunbmbel.supabase.co/functions/v1/api"
+case "$URL_DEFAULT" in https://epjkzltwyfexiunbmbel.supabase.co/functions/v1/api) URL_DEFAULT="" ;; esac
 CFG_DIR="$HOME/.config/onebrain"
 HOOK_DIR="$CFG_DIR/hooks"
 
@@ -24,8 +26,8 @@ say() { printf '  %s\n' "$*"; }
 bak() { [ -f "$1" ] && cp "$1" "$1.bak.$(date +%s)"; }
 
 # --- inputs -----------------------------------------------------------------
-URL="${ONEBRAIN_URL:-}"
-TOKEN="${ONEBRAIN_TOKEN:-}"
+TOKEN="${ONEBRAIN_TOKEN:-${1:-}}"
+URL="${ONEBRAIN_URL:-${2:-$URL_DEFAULT}}"
 [ -z "$URL" ]   && { read -rp "OneBrain API URL (…/functions/v1/api): " URL; URL="${URL:-$URL_DEFAULT}"; }
 [ -z "$URL" ]   && { echo "An API URL is required. Aborting." >&2; exit 1; }
 URL="${URL%/}"

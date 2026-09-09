@@ -724,8 +724,10 @@ function orgLabel() {
   return org.startsWith('user:') ? 'Your memory' : (org || 'Your organization');
 }
 
+/* The site serves install.sh with this environment's API address already
+ * inside (the sync fills it per target), so the line carries only the token. */
 const installLine = (token) =>
-  `curl -fsSL ${location.origin}/install.sh | ONEBRAIN_URL=${API_URL} ONEBRAIN_TOKEN=${token} bash`;
+  `curl -fsSL ${location.origin}/install.sh | bash -s -- ${token}`;
 
 /* Every harness, filled in. With a token each client is authenticated at
  * once; without one (a return visit) the OAuth sign-in takes over. */
@@ -1171,10 +1173,11 @@ function wireCatalog() {
       requestAnimationFrame(() => { tick = false; if (nearEnd()) loadMore(); });
     }, { passive: true });
   }
-  document.querySelectorAll('.catfilter').forEach((b) => b.addEventListener('click', () => {
+  // Scoped to the catalog: the Done step reuses the pill style for its tabs.
+  document.querySelectorAll('#catalog .catfilter').forEach((b) => b.addEventListener('click', () => {
     if (b.dataset.filter === cat.filter) return;
     cat.filter = b.dataset.filter;
-    document.querySelectorAll('.catfilter').forEach((x) =>
+    document.querySelectorAll('#catalog .catfilter').forEach((x) =>
       x.setAttribute('aria-pressed', String(x === b)));
     renderSources();
   }));

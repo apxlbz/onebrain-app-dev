@@ -294,12 +294,22 @@
           <em>&ldquo;what did we decide about pricing?&rdquo;</em></p>
       </div>
       <div class="harnpane" data-harn="desktop" role="tabpanel" hidden>
-        <p class="fh">The Claude Code line above connects Claude Desktop as well.
-          Without it: in Claude Desktop open <b>Settings &rarr; Connectors &rarr;
-          Add custom connector</b>, paste this address, and approve the Google
-          sign-in once.</p>
-        <div class="snip"><pre class="mono" id="h-desktop" translate="no"></pre>
-          <button type="button" class="ghostpill" data-copy="h-desktop">Copy</button></div>
+        <p class="fh">One click. The download is a Claude Desktop extension built
+          for you, token inside: open the file, Claude Desktop shows OneBrain,
+          press <b>Install</b>. Nothing to sign in to, nothing to configure.</p>
+        <div class="mrow" style="margin-top:0">
+          <button type="button" class="cta" id="h-mcpb">Download for Claude Desktop<span class="ctaarrow" aria-hidden="true">&darr;</span></button>
+        </div>
+        <p class="fh" id="h-mcpb-out" role="status" aria-live="polite"></p>
+        <details class="manual">
+          <summary>Prefer to add it by address?</summary>
+          <p class="fh" style="margin-top:8px">In Claude Desktop open <b>Settings
+            &rarr; Connectors &rarr; Add custom connector</b>, paste this address,
+            and approve the Google sign-in once. The Claude Code line also
+            connects Claude Desktop on this Mac.</p>
+          <div class="snip"><pre class="mono" id="h-desktop" translate="no"></pre>
+            <button type="button" class="ghostpill" data-copy="h-desktop">Copy</button></div>
+        </details>
       </div>
       <div class="harnpane" data-harn="web" role="tabpanel" hidden>
         <p class="fh">On claude.ai open <b>Settings &rarr; Connectors &rarr; Add custom
@@ -351,6 +361,6 @@
    URL fragment, and module-land (supabase-js) may consume fragments. Stash
    it first so the wizard always receives it. */
 window.__ob_hash = location.hash;</script>
-<script type="module" src="./onboard.js?v=29"></script>
+<script type="module" src="./onboard.js?v=30"></script>
 </body>
 </html>

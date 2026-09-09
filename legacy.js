@@ -1,4 +1,14 @@
 import "./compat.js?v=13";
+
+/* What a person types to confirm a destructive action: the organization's
+ * display name when it has one; for a personal organization (keyed
+ * "user:<email>") the email itself. Nobody should have to type the key. */
+function confirmWord(org) {
+  const name = String((org && org.name) || '');
+  const display = String((org && org.display_name) || '').trim();
+  if (display) return display;
+  return name.startsWith('user:') ? name.slice(5) : name;
+}
 import { FN } from "./env.js?v=1";
 
 /* OneBrain dashboard.
@@ -919,9 +929,9 @@ async function viewSettings(root) {
       </div>
       <div class="row" style="margin-top:14px">
         <label class="field" for="purgeconfirm" style="flex:1;min-width:220px">
-          Type <b class="mono" translate="no">${esc(org.name || '')}</b> to confirm
+          Type <b class="mono" translate="no">${esc(confirmWord(org))}</b> to confirm
           <input id="purgeconfirm" autocomplete="off" spellcheck="false"
-            placeholder="${esc(org.name || '')}" />
+            placeholder="${esc(confirmWord(org))}" />
         </label>
         <button id="purgego" class="destructive" disabled>Delete everything</button>
       </div>
@@ -933,16 +943,17 @@ async function viewSettings(root) {
           <div class="it">Delete the organization itself</div>
           <div class="id2">Everything above, plus the organization and its API
             tokens — and each connected source is revoked <b>at the provider</b>
-            (Google's revoke endpoint, Trello's token delete), so the access you
-            granted is genuinely withdrawn rather than just forgotten here. You are signed out; signing
-            in again creates it empty and starts setup from the top.</div>
+            where one allows it, so the access you granted is genuinely
+            withdrawn rather than just forgotten here. Anything that could not be
+            revoked is listed for you to finish by hand. You are signed out;
+            signing in again creates it empty and starts setup from the top.</div>
         </div>
       </div>
       <div class="row" style="margin-top:14px">
         <label class="field" for="delconfirm" style="flex:1;min-width:220px">
-          Type <b class="mono" translate="no">${esc(org.name || '')}</b> to confirm
+          Type <b class="mono" translate="no">${esc(confirmWord(org))}</b> to confirm
           <input id="delconfirm" autocomplete="off" spellcheck="false"
-            placeholder="${esc(org.name || '')}" />
+            placeholder="${esc(confirmWord(org))}" />
         </label>
         <button id="delgo" class="destructive" disabled>Delete organization</button>
       </div>
@@ -1020,12 +1031,13 @@ async function viewSettings(root) {
   const go = $('purgego');
   // The button stays dead until the name matches exactly — the same string the
   // server will re-check, so the UI never promises what the API would refuse.
+  /* Typing the name back IS the confirmation. No browser popup on top of it:
+   * that dialog names the host, not the product, and asks a question the
+   * person has just answered by typing. */
   input.addEventListener('input', () => {
-    go.disabled = input.value.trim() !== (org.name || '');
+    go.disabled = input.value.trim() !== confirmWord(org);
   });
   go.addEventListener('click', async () => {
-    if (!confirm(`Delete all ${n(org.raw)} inputs and ${n(org.facts)} facts? `
-                 + 'This cannot be undone.')) return;
     go.disabled = true; go.textContent = 'Deleting…';
     const out = $('purgeout');
     out.style.display = 'block';
@@ -1044,12 +1056,9 @@ async function viewSettings(root) {
   const dIn = $('delconfirm');
   const dGo = $('delgo');
   dIn.addEventListener('input', () => {
-    dGo.disabled = dIn.value.trim() !== (org.name || '');
+    dGo.disabled = dIn.value.trim() !== confirmWord(org);
   });
   dGo.addEventListener('click', async () => {
-    if (!confirm(`Delete ${org.name} entirely — all memory, its API tokens, and the `
-                 + 'source authorizations at Google and Trello? You will be signed out. '
-                 + 'This cannot be undone.')) return;
     dGo.disabled = true; $('delout').textContent = 'Deleting…';
     try {
       const res = await post('/v1/reset', { confirm: dIn.value.trim() });

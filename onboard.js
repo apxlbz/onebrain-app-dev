@@ -146,12 +146,14 @@ const STATE_LABEL = {
  * browsable rather than a search box with nothing behind it; search and the
  * filters narrow the same list rather than opening a different one. */
 
-const PAGE = 12;
-const cat = { q: '', filter: 'all', page: 0, seq: 0 };
+const BATCH = 24;
+const cat = { q: '', filter: 'all', seq: 0, natives: [], offset: 0, total: 0,
+              done: false, loading: false,
+              manual: !('IntersectionObserver' in window) };
 
-/* Brand colour for the monogram tile, keyed by a token of the slug or title.
+/* Brand colour for the fallback tile, keyed by a token of the slug or title.
  * These are colours, not logos: a coloured square with an initial reads as
- * "a product" at a glance without shipping (or hot-linking) anyone's mark. */
+ * "a product" at a glance when no logo could be fetched. */
 const BRAND = {
   github: '#24292f', gitlab: '#fc6d26', notion: '#1f1f1f', linear: '#5e6ad2',
   asana: '#f06a6a', atlassian: '#0052cc', jira: '#0052cc', confluence: '#0052cc',
@@ -161,23 +163,13 @@ const BRAND = {
   cloudflare: '#f38020', postgres: '#336791', postgresql: '#336791', mongodb: '#00684a',
   shopify: '#5e8e3e', zapier: '#ff4f00', discord: '#5865f2', dropbox: '#0061ff',
   box: '#0061d5', monday: '#ff3d57', clickup: '#7b68ee', todoist: '#e44332',
-  google: '#4285f4', microsoft: '#0078d4', teams: '#5059c9', outlook: '#0078d4',
-  onedrive: '#0078d4', sharepoint: '#038387', aws: '#ff9900', azure: '#0078d4',
-  gcp: '#4285f4', datadog: '#632ca6', pagerduty: '#06ac38', twilio: '#f22f46',
-  sendgrid: '#1a82e2', mailchimp: '#ffe01b', canva: '#00c4cc', miro: '#ffd02f',
-  loom: '#625df5', calendly: '#006bff', docusign: '#ffc820', paypal: '#003087',
-  square: '#1f1f1f', quickbooks: '#2ca01c', xero: '#13b5ea', workday: '#f38b00',
-  greenhouse: '#3ab549', lever: '#4f2f86', pipedrive: '#1a1a1a', close: '#1f1f1f',
-  freshdesk: '#25c16f', front: '#a02c76', trello: '#0079bf', youtube: '#ff0000',
-  x: '#1f1f1f', twitter: '#1da1f2', linkedin: '#0a66c2', reddit: '#ff4500',
-  spotify: '#1db954', apple: '#1f1f1f', openai: '#1f1f1f', anthropic: '#d97757',
-  huggingface: '#ff9d00', vercel_: '#171717', netlify: '#00c7b7', heroku: '#430098',
-  railway: '#7b3fe4', render: '#46e3b7', snowflake: '#29b5e8', databricks: '#ff3621',
-  bigquery: '#4285f4', tableau: '#e97627', looker: '#4285f4', grafana: '#f46800',
-  elastic: '#fec514', redis: '#dc382d', mysql: '#00758f', neon: '#00e599',
-  planetscale: '#1f1f1f', firebase: '#ffca28', okta: '#007dc1', auth0: '#eb5424',
-  '1password': '#1a8cff', bitwarden: '#175ddc', gong: '#8039df', fireflies: '#ff6b6b',
-  wispr: '#1f1f1f', otter: '#3d7cf5', zoom: '#0b5cff', webex: '#00bceb',
+  google: '#4285f4', microsoft: '#0078d4', aws: '#ff9900', azure: '#0078d4',
+  datadog: '#632ca6', pagerduty: '#06ac38', twilio: '#f22f46', canva: '#00c4cc',
+  miro: '#ffd02f', loom: '#625df5', calendly: '#006bff', paypal: '#003087',
+  trello: '#0079bf', linkedin: '#0a66c2', spotify: '#1db954', anthropic: '#d97757',
+  netlify: '#00c7b7', heroku: '#430098', railway: '#7b3fe4', snowflake: '#29b5e8',
+  grafana: '#f46800', redis: '#dc382d', firebase: '#ffca28', okta: '#007dc1',
+  auth0: '#eb5424', zoom: '#0b5cff',
 };
 
 const hue = (str) => {
@@ -190,9 +182,35 @@ function tileColor(slug, title) {
   for (const t of toks) if (BRAND[t]) return BRAND[t];
   return `hsl(${hue(slug)} 34% 46%)`;
 }
+const initial = (slug, title) => (String(title || slug).trim()[0] || '?').toUpperCase();
 const monogram = (slug, title) =>
   `<span class="srcicon tile" style="--tile:${tileColor(slug, title)}" aria-hidden="true">${
-    esc((String(title || slug).trim()[0] || '?').toUpperCase())}</span>`;
+    esc(initial(slug, title))}</span>`;
+
+/* The registry names servers in reverse-DNS — "com.notion/notion",
+ * "agency.goji/goji" — so the namespace IS the vendor's domain, reversed.
+ * That domain's favicon is the real mark. GitHub-hosted namespaces
+ * (io.github.<user>) say nothing about the vendor, so those fall back to
+ * the server's own host with the usual mcp./api./app. prefixes removed. */
+function brandDomain(slug, url) {
+  const ns = String(slug || '').split('/')[0];
+  if (ns.includes('.') && !ns.startsWith('io.github.')) {
+    return ns.split('.').reverse().join('.').toLowerCase();
+  }
+  try {
+    return new URL(url).hostname.replace(/^(mcp|api|app|www|server|remote)\./i, '')
+      .toLowerCase();
+  } catch { return ''; }
+}
+const logoUrl = (domain) => `https://icons.duckduckgo.com/ip3/${encodeURIComponent(domain)}.ico`;
+
+function catIcon(r) {
+  const d = brandDomain(r.slug, r.url);
+  return d
+    ? `<span class="srcicon logo" data-logo="${esc(d)}" style="--tile:${tileColor(r.slug, r.title)}"
+         data-initial="${esc(initial(r.slug, r.title))}" aria-hidden="true"></span>`
+    : monogram(r.slug, r.title);
+}
 
 const catShort = (slug) => (String(slug).split('/').pop() || 'server')
   .toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 24) || 'server';
@@ -214,7 +232,7 @@ function catalogCard(r, c) {
   const what = (r.description || '').replace(/\s+/g, ' ').trim();
   return `<button class="srccard" data-mslug="${esc(r.slug)}" data-on="${on}"
             aria-label="${esc(c ? `Reconnect ${r.title}` : `Connect ${r.title}`)}">
-      <span class="srcname">${monogram(r.slug, r.title)}${esc(r.title)}<span class="sd" aria-hidden="true"></span></span>
+      <span class="srcname">${catIcon(r)}${esc(r.title)}<span class="sd" aria-hidden="true"></span></span>
       <span class="srcwhat" title="${esc(what)}">${esc(what || 'Remote source')}</span>
       <span class="srcstate">${esc(label)}</span>
     </button>`;
@@ -225,7 +243,7 @@ const skeletons = (n) => Array.from({ length: Math.max(0, n) }, () =>
 
 async function fetchCatalog(from, to) {
   let sel = window.OB.sb.from('mcp_catalog')
-    .select('slug,title,description,auth,featured', { count: 'exact' });
+    .select('slug,title,description,url,auth,featured', { count: 'exact' });
   if (cat.q) {
     const safe = cat.q.replace(/[%,()]/g, ' ');
     sel = sel.or(`title.ilike.%${safe}%,description.ilike.%${safe}%,slug.ilike.%${safe}%`);
@@ -237,63 +255,63 @@ async function fetchCatalog(from, to) {
   return { rows: data || [], count: count || 0 };
 }
 
-function wireCards() {
-  const grid = $('srcgrid');
-  grid.querySelectorAll('[data-src]').forEach((b) =>
+/* Logos load after the card is in the DOM, with the fallback listener
+ * attached BEFORE src is set so a 404 can never slip past it: a missing
+ * favicon turns into the coloured initial rather than a broken image. */
+function loadLogos(root) {
+  root.querySelectorAll('.srcicon.logo[data-logo]').forEach((box) => {
+    const img = new Image();
+    img.alt = '';
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    img.referrerPolicy = 'no-referrer';
+    const fallback = () => {
+      box.classList.remove('logo'); box.classList.add('tile');
+      box.textContent = box.dataset.initial || '?';
+    };
+    img.addEventListener('error', fallback);
+    // A placeholder answer for an unknown host is a few pixels wide.
+    img.addEventListener('load', () => { if (img.naturalWidth < 8) fallback(); });
+    img.src = logoUrl(box.dataset.logo);
+    box.appendChild(img);
+    box.removeAttribute('data-logo');
+  });
+}
+
+function wireCards(root) {
+  root.querySelectorAll('[data-src]').forEach((b) =>
     b.addEventListener('click', () => connect(b)));
-  grid.querySelectorAll('[data-mslug]').forEach((b) =>
+  root.querySelectorAll('[data-mslug]').forEach((b) =>
     b.addEventListener('click', () => {
       b.querySelector('.srcstate').textContent = 'Checking\u2026';
       mcpStart({ slug: b.dataset.mslug });
     }));
+  loadLogos(root);
 }
 
-function paintPager(total, shown, note) {
-  const nav = $('catpage');
-  const pages = Math.max(1, Math.ceil(total / PAGE));
-  if (cat.page > pages - 1) cat.page = pages - 1;
-  const first = total ? cat.page * PAGE + 1 : 0;
-  const last = Math.min(total, cat.page * PAGE + shown);
+/* Append cards without re-rendering (and re-wiring) the ones already there. */
+function appendCards(html) {
+  const tpl = document.createElement('template');
+  tpl.innerHTML = html;
+  wireCards(tpl.content);
+  $('srcgrid').appendChild(tpl.content);
+}
+
+function paintFoot(note) {
+  const shown = $('srcgrid').querySelectorAll('.srccard:not(.skel)').length;
   const fmt = (n) => n.toLocaleString('en-US');
-  /* Page numbers: first, last, and the current page's neighbours — enough to
-     jump, not a hundred buttons. */
-  const want = new Set([0, pages - 1, cat.page - 1, cat.page, cat.page + 1]
-    .filter((i) => i >= 0 && i < pages));
-  const nums = []; let prev = -1;
-  [...want].sort((x, y) => x - y).forEach((i) => {
-    if (prev >= 0 && i - prev > 1) nums.push('<span class="pgap" aria-hidden="true">&middot;&middot;&middot;</span>');
-    nums.push(`<button type="button" class="pnum" data-pg="${i}"
-      aria-label="Page ${i + 1}" ${i === cat.page ? 'aria-current="page"' : ''}>${i + 1}</button>`);
-    prev = i;
-  });
-  nav.innerHTML = `
-    <span class="pcount">${note ? esc(note)
-      : total ? `${fmt(first)}&ndash;${fmt(last)} of ${fmt(total)}` : 'No matches'}</span>
-    <span class="pnav">
-      <button type="button" class="parrow" data-pg="prev" aria-label="Previous page"
-        ${cat.page === 0 ? 'disabled' : ''}>&larr;</button>
-      ${pages > 1 ? nums.join('') : ''}
-      <button type="button" class="parrow" data-pg="next" aria-label="Next page"
-        ${cat.page >= pages - 1 ? 'disabled' : ''}>&rarr;</button>
-    </span>`;
-  nav.hidden = !total && !note;
-  nav.querySelectorAll('[data-pg]').forEach((b) => b.addEventListener('click', () => {
-    const v = b.dataset.pg;
-    const next = v === 'prev' ? cat.page - 1 : v === 'next' ? cat.page + 1 : Number(v);
-    if (next === cat.page || next < 0 || next >= pages) return;
-    cat.page = next;
-    renderSources();
-    $('catalog').scrollIntoView({ behavior: reduced.matches ? 'auto' : 'smooth', block: 'start' });
-  }));
+  $('cat-count').textContent = note ? note
+    : !cat.total ? 'No matches'
+    : cat.done ? `All ${fmt(cat.total)} shown`
+    : `Showing ${fmt(shown)} of ${fmt(cat.total)} \u2014 keep scrolling`;
+  $('cat-more').hidden = cat.done || cat.loading || !cat.manual;
+  $('catfoot').hidden = !cat.total && !note;
 }
 
-/* Paints one page of the merged list. Built-in sources come first in the
- * virtual order (they are the ones with a verified, first-party path), then
- * the catalog in featured-then-alphabetical order; a page is a window over
- * that combined sequence, so the offset into the catalog shifts by however
- * many built-ins precede it. Built-ins paint at once; catalog rows fill in
- * behind skeletons so the grid never jumps. A stale fetch (typing fast, or
- * paging twice) is dropped by sequence number. */
+/* One continuous list. Built-in sources come first (they have a verified
+ * first-party path), then the catalog in featured-then-alphabetical order,
+ * fetched in batches as the reader nears the bottom. Search and the filters
+ * reset the list; a stale fetch (typing fast) is dropped by sequence number. */
 async function renderSources() {
   const seq = ++cat.seq;
   const grid = $('srcgrid');
@@ -302,43 +320,68 @@ async function renderSources() {
   let natives = SOURCES.filter((s) => !q
     || s.label.toLowerCase().includes(q) || s.what.toLowerCase().includes(q));
   if (cat.filter === 'connected') natives = natives.filter((s) => by[s.id]);
-  const N = natives.length;
-  const start = cat.page * PAGE;
-  const nat = natives.slice(start, start + PAGE);
+  cat.natives = natives; cat.offset = 0; cat.done = false; cat.loading = false;
+  cat.total = natives.length;
+  grid.innerHTML = natives.map((s) => nativeCard(s, by[s.id])).join('');
+  wireCards(grid);
 
   if (cat.filter === 'connected') {
     /* Connected is a view over what this org actually has, not the catalog. */
     const mcp = state.conns.filter((c) => String(c.provider).startsWith('mcp:'))
       .filter((c) => !q || c.provider.toLowerCase().includes(q));
-    const all = nat.map((s) => nativeCard(s, by[s.id])).concat(mcp.map((c) =>
-      catalogCard({ slug: c.provider.slice(4), title: c.provider.slice(4),
-                    description: 'Remote source, polled every sweep.' }, c)));
-    grid.innerHTML = all.length ? all.join('')
-      : '<p class="catempty">Nothing is connected yet. Pick anything from All to start.</p>';
-    wireCards();
-    paintPager(N + mcp.length, all.length);
+    appendCards(mcp.map((c) => catalogCard({ slug: c.provider.slice(4),
+      title: c.provider.slice(4), url: '',
+      description: 'Remote source, polled every sweep.' }, c)).join(''));
+    cat.total = natives.length + mcp.length; cat.done = true;
+    if (!cat.total) grid.innerHTML = '<p class="catempty">Nothing is connected yet. Pick anything from All to start.</p>';
+    paintFoot();
     return;
   }
-
-  const catFrom = Math.max(0, start - N);
-  const catTo = start + PAGE - 1 - N;
-  grid.innerHTML = nat.map((s) => nativeCard(s, by[s.id])).join('')
-    + (catTo >= 0 ? skeletons(PAGE - nat.length) : '');
-  wireCards();
-  if (catTo < 0) { paintPager(N, nat.length); return; }
-
-  let rows = [], count = 0, note = '';
-  try { ({ rows, count } = await fetchCatalog(catFrom, catTo)); }
-  catch (e) { note = `Catalog unavailable \u2014 ${String(e.message || e).slice(0, 60)}`; }
-  if (seq !== cat.seq) return;
-  const cards = nat.map((s) => nativeCard(s, by[s.id]))
-    .concat(rows.map((r) => catalogCard(r, by[`mcp:${catShort(r.slug)}`])));
-  grid.innerHTML = cards.length ? cards.join('')
-    : `<p class="catempty">Nothing matches &ldquo;${esc(cat.q)}&rdquo;. Try another
-        name, or add it by server address below.</p>`;
-  wireCards();
-  paintPager(N + count, cards.length, note);
+  await loadMore(seq);
 }
+
+async function loadMore(seq = cat.seq) {
+  if (cat.done || cat.loading) return;
+  cat.loading = true;
+  const grid = $('srcgrid');
+  const by = Object.fromEntries(state.conns.map((c) => [c.provider, c]));
+  grid.insertAdjacentHTML('beforeend',
+    skeletons(cat.offset ? 6 : Math.max(3, BATCH - cat.natives.length)));
+  paintFoot();
+  let note = '';
+  try {
+    const { rows, count } = await fetchCatalog(cat.offset, cat.offset + BATCH - 1);
+    if (seq !== cat.seq) return;
+    cat.total = cat.natives.length + count;
+    cat.offset += rows.length;
+    if (rows.length < BATCH || cat.offset >= count) cat.done = true;
+    grid.querySelectorAll('.skel').forEach((el) => el.remove());
+    appendCards(rows.map((r) => catalogCard(r, by[`mcp:${catShort(r.slug)}`])).join(''));
+    if (!grid.querySelector('.srccard')) {
+      grid.innerHTML = `<p class="catempty">Nothing matches &ldquo;${esc(cat.q)}&rdquo;. Try
+        another name, or add it by server address below.</p>`;
+    }
+  } catch (e) {
+    if (seq !== cat.seq) return;
+    grid.querySelectorAll('.skel').forEach((el) => el.remove());
+    note = `Catalog unavailable \u2014 ${String(e.message || e).slice(0, 60)}`;
+    cat.done = true;
+  } finally {
+    if (seq === cat.seq) {
+      cat.loading = false; paintFoot(note);
+      /* The observer only reports CHANGES. If the end marker was already in
+       * range while this batch loaded (a tall viewport, a short list), it
+       * stays in range and the observer stays silent — so look once more. */
+      if (!cat.done) requestAnimationFrame(() => { if (nearEnd()) loadMore(); });
+    }
+  }
+}
+
+const nearEnd = () => {
+  const el = $('cat-sentinel');
+  return !!el && !el.closest('[hidden]')
+    && el.getBoundingClientRect().top < innerHeight + 480;
+};
 
 /* Connecting a Google source is a plain navigation through Supabase Auth's own
  * /authorize endpoint — the identical GoTrue flow the login page uses, with two
@@ -784,13 +827,28 @@ function wireCatalog() {
     t = setTimeout(() => {
       const q = $('cat-q').value.trim();
       if (q === cat.q) return;
-      cat.q = q; cat.page = 0;
+      cat.q = q;
       renderSources();
     }, 220);
   });
+  $('cat-more').addEventListener('click', () => loadMore());
+  if (!cat.manual) {
+    // Fetch the next batch while the reader is still a couple of rows above
+    // the end. The observer catches most cases; the scroll listener catches
+    // the rest (the observer reports changes, and a marker that stays inside
+    // its margin while a batch loads never changes).
+    new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) loadMore(); },
+                             { rootMargin: '480px 0px' }).observe($('cat-sentinel'));
+    let tick = false;
+    addEventListener('scroll', () => {
+      if (tick) return;
+      tick = true;
+      requestAnimationFrame(() => { tick = false; if (nearEnd()) loadMore(); });
+    }, { passive: true });
+  }
   document.querySelectorAll('.catfilter').forEach((b) => b.addEventListener('click', () => {
     if (b.dataset.filter === cat.filter) return;
-    cat.filter = b.dataset.filter; cat.page = 0;
+    cat.filter = b.dataset.filter;
     document.querySelectorAll('.catfilter').forEach((x) =>
       x.setAttribute('aria-pressed', String(x === b)));
     renderSources();

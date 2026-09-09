@@ -10,7 +10,7 @@
 <meta name="description" content="Name your organization, connect your sources, and verify everything works before you rely on it." />
 <link rel="stylesheet" href="./app.css?v=3" />
 <link rel="stylesheet" href="./home.css?v=3" />
-<link rel="stylesheet" href="./onboard.css?v=5" />
+<link rel="stylesheet" href="./onboard.css?v=6" />
 </head>
 <body class="home ob">
 
@@ -146,7 +146,11 @@
                aria-label="Search integrations" autocomplete="off" spellcheck="false" />
       </label>
       <div class="srcgrid" id="srcgrid"></div>
-      <nav class="catpage" id="catpage" aria-label="Integration pages"></nav>
+      <div id="cat-sentinel" aria-hidden="true"></div>
+      <div class="catfoot" id="catfoot">
+        <span class="pcount" id="cat-count" role="status" aria-live="polite"></span>
+        <button type="button" class="ghostpill" id="cat-more" hidden>Show more</button>
+      </div>
     </div>
 
     <section class="wsteps reveal" id="trello-attach" hidden
@@ -273,6 +277,6 @@
    URL fragment, and module-land (supabase-js) may consume fragments. Stash
    it first so the wizard always receives it. */
 window.__ob_hash = location.hash;</script>
-<script type="module" src="./onboard.js?v=22"></script>
+<script type="module" src="./onboard.js?v=23"></script>
 </body>
 </html>

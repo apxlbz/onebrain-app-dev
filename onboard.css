@@ -257,28 +257,21 @@ button.textlink { background:none; border:none; cursor:pointer; padding:0; }
 .catempty { grid-column:1 / -1; padding:var(--u5) var(--u3); text-align:center;
   color:var(--color-silver-mist); font-size:15px; text-wrap:pretty; margin:0; }
 
-/* Pager */
-.catpage { display:flex; align-items:center; justify-content:space-between;
+/* Fetched logos sit in the same 22px box as the built-in marks. */
+.srcicon.logo { display:grid; place-items:center; border-radius:6px; overflow:hidden; }
+.srcicon.logo img { width:100%; height:100%; display:block; object-fit:contain; }
+
+/* The list's foot: how far you are through it, in the rail's mono voice,
+   and a button for anyone whose browser will not fetch on scroll. */
+#cat-sentinel { height:1px; }
+.catfoot { display:flex; align-items:center; justify-content:space-between;
   gap:var(--u3); flex-wrap:wrap; padding-top:var(--u3);
   border-top:1px solid var(--color-ash-line);
   font-family:ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size:11px; letter-spacing:.08em; text-transform:uppercase;
   color:var(--color-ash-gray); font-variant-numeric:tabular-nums; }
-.catpage[hidden] { display:none; }
-.pnav { display:inline-flex; align-items:center; gap:2px; }
-.pnum, .parrow { height:30px; min-width:30px; padding:0 8px; cursor:pointer;
-  background:transparent; border:1px solid transparent; border-radius:8px;
-  color:var(--color-silver-mist); font:inherit; letter-spacing:inherit;
-  transition:border-color 160ms ease, color 160ms ease, background-color 160ms ease; }
-.pnum:hover, .parrow:hover:not(:disabled) { border-color:var(--color-ash-line);
-  color:var(--color-bone-white); }
-.pnum[aria-current="page"] { background:var(--color-bone-white);
-  color:var(--color-void); }
-.parrow { font-size:14px; }
-.parrow:disabled { opacity:.35; cursor:default; }
-.pnum:focus-visible, .parrow:focus-visible { outline:2px solid var(--color-electric-iris);
-  outline-offset:2px; }
-.pgap { padding:0 4px; letter-spacing:0; }
+.catfoot[hidden] { display:none; }
+.catfoot .ghostpill { height:34px; padding:0 16px; }
 
 @media (max-width: 720px) {
   #srcgrid { grid-template-columns:repeat(2, minmax(0, 1fr)); }

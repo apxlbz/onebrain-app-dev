@@ -295,6 +295,7 @@ button.textlink { background:none; border:none; cursor:pointer; padding:0; }
 .mtp select.fi { flex:1 1 260px; width:auto; height:44px; padding-right:40px;
   background-position:calc(100% - 22px) 19px, calc(100% - 16px) 19px; }
 .mtp[hidden] { display:none; }
+.mtp-acts { margin-top:var(--u4); }
 
 /* --------------------------------------------------------------- verify */
 

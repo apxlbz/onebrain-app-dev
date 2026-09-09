@@ -134,24 +134,207 @@ const STATE_LABEL = {
   ok: 'Verified', pending: 'Saved, not yet verified', error: 'Needs attention',
 };
 
-function renderSources() {
-  const by = Object.fromEntries(state.conns.map((c) => [c.provider, c]));
-  $('srcgrid').innerHTML = SOURCES.map((s) => {
-    const c = by[s.id];
-    const on = !c ? '0' : c.status === 'ok' ? '1' : c.status === 'error' ? 'err' : 'p';
-    const label = !c ? 'Not connected'
-      : (STATE_LABEL[c.status] || 'Connected');
-    return `<button class="srccard" data-src="${esc(s.id)}" data-pck="${esc(s.pck)}"
-              data-on="${on}" aria-label="${esc(c ? `Reconnect ${s.label}` : `Connect ${s.label}`)}">
-        <span class="srcname"><span class="srcicon" aria-hidden="true">${ICON[s.id] || ''}</span>${esc(s.label)}<span class="sd" aria-hidden="true"></span></span>
-        <span class="srcwhat">${esc(s.what)}</span>
-        <span class="srcstate">${esc(label)}</span>
-      </button>`;
-  }).join('');
+/* The integrations catalog.
+ *
+ * One grid, one vocabulary. The four built-in sources and the ~1,200 servers
+ * synced from the public registry are presented the same way — a mark, a
+ * name, one line on what gets remembered, and a state — because to the person
+ * connecting them the transport is irrelevant. Pages of twelve, so the list is
+ * browsable rather than a search box with nothing behind it; search and the
+ * filters narrow the same list rather than opening a different one. */
 
-  $('srcgrid').querySelectorAll('[data-src]').forEach((b) => {
-    b.addEventListener('click', () => connect(b));
+const PAGE = 12;
+const cat = { q: '', filter: 'all', page: 0, seq: 0 };
+
+/* Brand colour for the monogram tile, keyed by a token of the slug or title.
+ * These are colours, not logos: a coloured square with an initial reads as
+ * "a product" at a glance without shipping (or hot-linking) anyone's mark. */
+const BRAND = {
+  github: '#24292f', gitlab: '#fc6d26', notion: '#1f1f1f', linear: '#5e6ad2',
+  asana: '#f06a6a', atlassian: '#0052cc', jira: '#0052cc', confluence: '#0052cc',
+  bitbucket: '#0052cc', hubspot: '#ff7a59', intercom: '#1f8ded', sentry: '#362d59',
+  slack: '#4a154b', stripe: '#635bff', figma: '#a259ff', zendesk: '#03363d',
+  salesforce: '#00a1e0', airtable: '#fcb400', supabase: '#3ecf8e', vercel: '#171717',
+  cloudflare: '#f38020', postgres: '#336791', postgresql: '#336791', mongodb: '#00684a',
+  shopify: '#5e8e3e', zapier: '#ff4f00', discord: '#5865f2', dropbox: '#0061ff',
+  box: '#0061d5', monday: '#ff3d57', clickup: '#7b68ee', todoist: '#e44332',
+  google: '#4285f4', microsoft: '#0078d4', teams: '#5059c9', outlook: '#0078d4',
+  onedrive: '#0078d4', sharepoint: '#038387', aws: '#ff9900', azure: '#0078d4',
+  gcp: '#4285f4', datadog: '#632ca6', pagerduty: '#06ac38', twilio: '#f22f46',
+  sendgrid: '#1a82e2', mailchimp: '#ffe01b', canva: '#00c4cc', miro: '#ffd02f',
+  loom: '#625df5', calendly: '#006bff', docusign: '#ffc820', paypal: '#003087',
+  square: '#1f1f1f', quickbooks: '#2ca01c', xero: '#13b5ea', workday: '#f38b00',
+  greenhouse: '#3ab549', lever: '#4f2f86', pipedrive: '#1a1a1a', close: '#1f1f1f',
+  freshdesk: '#25c16f', front: '#a02c76', trello: '#0079bf', youtube: '#ff0000',
+  x: '#1f1f1f', twitter: '#1da1f2', linkedin: '#0a66c2', reddit: '#ff4500',
+  spotify: '#1db954', apple: '#1f1f1f', openai: '#1f1f1f', anthropic: '#d97757',
+  huggingface: '#ff9d00', vercel_: '#171717', netlify: '#00c7b7', heroku: '#430098',
+  railway: '#7b3fe4', render: '#46e3b7', snowflake: '#29b5e8', databricks: '#ff3621',
+  bigquery: '#4285f4', tableau: '#e97627', looker: '#4285f4', grafana: '#f46800',
+  elastic: '#fec514', redis: '#dc382d', mysql: '#00758f', neon: '#00e599',
+  planetscale: '#1f1f1f', firebase: '#ffca28', okta: '#007dc1', auth0: '#eb5424',
+  '1password': '#1a8cff', bitwarden: '#175ddc', gong: '#8039df', fireflies: '#ff6b6b',
+  wispr: '#1f1f1f', otter: '#3d7cf5', zoom: '#0b5cff', webex: '#00bceb',
+};
+
+const hue = (str) => {
+  let h = 0;
+  for (const ch of String(str)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return h % 360;
+};
+function tileColor(slug, title) {
+  const toks = `${slug} ${title}`.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  for (const t of toks) if (BRAND[t]) return BRAND[t];
+  return `hsl(${hue(slug)} 34% 46%)`;
+}
+const monogram = (slug, title) =>
+  `<span class="srcicon tile" style="--tile:${tileColor(slug, title)}" aria-hidden="true">${
+    esc((String(title || slug).trim()[0] || '?').toUpperCase())}</span>`;
+
+const catShort = (slug) => (String(slug).split('/').pop() || 'server')
+  .toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 24) || 'server';
+
+function nativeCard(s, c) {
+  const on = !c ? '0' : c.status === 'ok' ? '1' : c.status === 'error' ? 'err' : 'p';
+  const label = !c ? 'Not connected' : (STATE_LABEL[c.status] || 'Connected');
+  return `<button class="srccard" data-src="${esc(s.id)}" data-pck="${esc(s.pck)}"
+            data-on="${on}" aria-label="${esc(c ? `Reconnect ${s.label}` : `Connect ${s.label}`)}">
+      <span class="srcname"><span class="srcicon" aria-hidden="true">${ICON[s.id] || ''}</span>${esc(s.label)}<span class="sd" aria-hidden="true"></span></span>
+      <span class="srcwhat">${esc(s.what)}</span>
+      <span class="srcstate">${esc(label)}</span>
+    </button>`;
+}
+
+function catalogCard(r, c) {
+  const on = !c ? '0' : c.status === 'ok' ? '1' : c.status === 'error' ? 'err' : 'p';
+  const label = !c ? 'Not connected' : (STATE_LABEL[c.status] || 'Connected');
+  const what = (r.description || '').replace(/\s+/g, ' ').trim();
+  return `<button class="srccard" data-mslug="${esc(r.slug)}" data-on="${on}"
+            aria-label="${esc(c ? `Reconnect ${r.title}` : `Connect ${r.title}`)}">
+      <span class="srcname">${monogram(r.slug, r.title)}${esc(r.title)}<span class="sd" aria-hidden="true"></span></span>
+      <span class="srcwhat" title="${esc(what)}">${esc(what || 'Remote source')}</span>
+      <span class="srcstate">${esc(label)}</span>
+    </button>`;
+}
+
+const skeletons = (n) => Array.from({ length: Math.max(0, n) }, () =>
+  '<div class="srccard skel" aria-hidden="true"><span class="srcname"><span class="srcicon"></span><span class="sk sk-t"></span></span><span class="sk sk-w"></span><span class="sk sk-s"></span></div>').join('');
+
+async function fetchCatalog(from, to) {
+  let sel = window.OB.sb.from('mcp_catalog')
+    .select('slug,title,description,auth,featured', { count: 'exact' });
+  if (cat.q) {
+    const safe = cat.q.replace(/[%,()]/g, ' ');
+    sel = sel.or(`title.ilike.%${safe}%,description.ilike.%${safe}%,slug.ilike.%${safe}%`);
+  }
+  if (cat.filter === 'featured') sel = sel.eq('featured', true);
+  const { data, count, error } = await sel
+    .order('featured', { ascending: false }).order('title').range(from, to);
+  if (error) throw new Error(error.message || 'catalog unavailable');
+  return { rows: data || [], count: count || 0 };
+}
+
+function wireCards() {
+  const grid = $('srcgrid');
+  grid.querySelectorAll('[data-src]').forEach((b) =>
+    b.addEventListener('click', () => connect(b)));
+  grid.querySelectorAll('[data-mslug]').forEach((b) =>
+    b.addEventListener('click', () => {
+      b.querySelector('.srcstate').textContent = 'Checking\u2026';
+      mcpStart({ slug: b.dataset.mslug });
+    }));
+}
+
+function paintPager(total, shown, note) {
+  const nav = $('catpage');
+  const pages = Math.max(1, Math.ceil(total / PAGE));
+  if (cat.page > pages - 1) cat.page = pages - 1;
+  const first = total ? cat.page * PAGE + 1 : 0;
+  const last = Math.min(total, cat.page * PAGE + shown);
+  const fmt = (n) => n.toLocaleString('en-US');
+  /* Page numbers: first, last, and the current page's neighbours — enough to
+     jump, not a hundred buttons. */
+  const want = new Set([0, pages - 1, cat.page - 1, cat.page, cat.page + 1]
+    .filter((i) => i >= 0 && i < pages));
+  const nums = []; let prev = -1;
+  [...want].sort((x, y) => x - y).forEach((i) => {
+    if (prev >= 0 && i - prev > 1) nums.push('<span class="pgap" aria-hidden="true">&middot;&middot;&middot;</span>');
+    nums.push(`<button type="button" class="pnum" data-pg="${i}"
+      aria-label="Page ${i + 1}" ${i === cat.page ? 'aria-current="page"' : ''}>${i + 1}</button>`);
+    prev = i;
   });
+  nav.innerHTML = `
+    <span class="pcount">${note ? esc(note)
+      : total ? `${fmt(first)}&ndash;${fmt(last)} of ${fmt(total)}` : 'No matches'}</span>
+    <span class="pnav">
+      <button type="button" class="parrow" data-pg="prev" aria-label="Previous page"
+        ${cat.page === 0 ? 'disabled' : ''}>&larr;</button>
+      ${pages > 1 ? nums.join('') : ''}
+      <button type="button" class="parrow" data-pg="next" aria-label="Next page"
+        ${cat.page >= pages - 1 ? 'disabled' : ''}>&rarr;</button>
+    </span>`;
+  nav.hidden = !total && !note;
+  nav.querySelectorAll('[data-pg]').forEach((b) => b.addEventListener('click', () => {
+    const v = b.dataset.pg;
+    const next = v === 'prev' ? cat.page - 1 : v === 'next' ? cat.page + 1 : Number(v);
+    if (next === cat.page || next < 0 || next >= pages) return;
+    cat.page = next;
+    renderSources();
+    $('catalog').scrollIntoView({ behavior: reduced.matches ? 'auto' : 'smooth', block: 'start' });
+  }));
+}
+
+/* Paints one page of the merged list. Built-in sources come first in the
+ * virtual order (they are the ones with a verified, first-party path), then
+ * the catalog in featured-then-alphabetical order; a page is a window over
+ * that combined sequence, so the offset into the catalog shifts by however
+ * many built-ins precede it. Built-ins paint at once; catalog rows fill in
+ * behind skeletons so the grid never jumps. A stale fetch (typing fast, or
+ * paging twice) is dropped by sequence number. */
+async function renderSources() {
+  const seq = ++cat.seq;
+  const grid = $('srcgrid');
+  const by = Object.fromEntries(state.conns.map((c) => [c.provider, c]));
+  const q = cat.q.toLowerCase();
+  let natives = SOURCES.filter((s) => !q
+    || s.label.toLowerCase().includes(q) || s.what.toLowerCase().includes(q));
+  if (cat.filter === 'connected') natives = natives.filter((s) => by[s.id]);
+  const N = natives.length;
+  const start = cat.page * PAGE;
+  const nat = natives.slice(start, start + PAGE);
+
+  if (cat.filter === 'connected') {
+    /* Connected is a view over what this org actually has, not the catalog. */
+    const mcp = state.conns.filter((c) => String(c.provider).startsWith('mcp:'))
+      .filter((c) => !q || c.provider.toLowerCase().includes(q));
+    const all = nat.map((s) => nativeCard(s, by[s.id])).concat(mcp.map((c) =>
+      catalogCard({ slug: c.provider.slice(4), title: c.provider.slice(4),
+                    description: 'Remote source, polled every sweep.' }, c)));
+    grid.innerHTML = all.length ? all.join('')
+      : '<p class="catempty">Nothing is connected yet. Pick anything from All to start.</p>';
+    wireCards();
+    paintPager(N + mcp.length, all.length);
+    return;
+  }
+
+  const catFrom = Math.max(0, start - N);
+  const catTo = start + PAGE - 1 - N;
+  grid.innerHTML = nat.map((s) => nativeCard(s, by[s.id])).join('')
+    + (catTo >= 0 ? skeletons(PAGE - nat.length) : '');
+  wireCards();
+  if (catTo < 0) { paintPager(N, nat.length); return; }
+
+  let rows = [], count = 0, note = '';
+  try { ({ rows, count } = await fetchCatalog(catFrom, catTo)); }
+  catch (e) { note = `Catalog unavailable \u2014 ${String(e.message || e).slice(0, 60)}`; }
+  if (seq !== cat.seq) return;
+  const cards = nat.map((s) => nativeCard(s, by[s.id]))
+    .concat(rows.map((r) => catalogCard(r, by[`mcp:${catShort(r.slug)}`])));
+  grid.innerHTML = cards.length ? cards.join('')
+    : `<p class="catempty">Nothing matches &ldquo;${esc(cat.q)}&rdquo;. Try another
+        name, or add it by server address below.</p>`;
+  wireCards();
+  paintPager(N + count, cards.length, note);
 }
 
 /* Connecting a Google source is a plain navigation through Supabase Auth's own
@@ -544,7 +727,7 @@ function wire() {
   });
 }
 
-// ------------------------------------------------- MCP catalog sources
+// ------------------------------------------------- remote (MCP) sources
 
 const mcpShort = (s) => (String(s).split('/').pop() || 'server')
   .toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 24) || 'server';
@@ -591,44 +774,29 @@ async function mcpStart({ slug, url }) {
   } catch (e) { out.textContent = `Failed: ${e.message || e}`; }
 }
 
-async function mcpSearch() {
-  const q = $('mcp-q').value.trim();
-  const box = $('mcp-results');
-  if (q.length < 2) { box.innerHTML = ''; return; }
-  const safe = q.replace(/[%,()]/g, ' ');
-  const { data } = await window.OB.sb.from('mcp_catalog')
-    .select('slug,title,description,auth')
-    .or(`title.ilike.%${safe}%,description.ilike.%${safe}%,slug.ilike.%${safe}%`)
-    .order('featured', { ascending: false }).limit(8);
-  box.innerHTML = (data || []).map((r) =>
-    `<button type="button" class="srccard" data-mslug="${esc(r.slug)}" style="width:100%;text-align:left;margin:4px 0">
-       <span class="srcname">${esc(r.title)}${r.auth === 'oauth' ? ' · OAuth' : r.auth === 'header' ? ' · token' : ''}</span>
-       <span class="srcwhat">${esc((r.description || '').slice(0, 140))}</span>
-     </button>`).join('')
-    || '<p class="fh">Nothing matches — try the URL box below.</p>';
-  box.querySelectorAll('[data-mslug]').forEach((b) =>
-    b.addEventListener('click', () => mcpStart({ slug: b.dataset.mslug })));
-}
-
-let mcpSearchTimer;
-async function wireMcp() {
-  $('mcp-q').addEventListener('input', () => {
-    clearTimeout(mcpSearchTimer);
-    mcpSearchTimer = setTimeout(() => mcpSearch().catch(() => {}), 250);
+function wireCatalog() {
+  let t;
+  $('cat-q').addEventListener('input', () => {
+    clearTimeout(t);
+    t = setTimeout(() => {
+      const q = $('cat-q').value.trim();
+      if (q === cat.q) return;
+      cat.q = q; cat.page = 0;
+      renderSources();
+    }, 220);
   });
+  document.querySelectorAll('.catfilter').forEach((b) => b.addEventListener('click', () => {
+    if (b.dataset.filter === cat.filter) return;
+    cat.filter = b.dataset.filter; cat.page = 0;
+    document.querySelectorAll('.catfilter').forEach((x) =>
+      x.setAttribute('aria-pressed', String(x === b)));
+    renderSources();
+  }));
   $('mcp-url-go').addEventListener('click', () => {
     const u = $('mcp-url').value.trim();
     if (u.startsWith('https://')) mcpStart({ url: u });
-    else $('mcp-out').textContent = 'Paste an https:// MCP server URL.';
+    else $('mcp-out').textContent = 'Paste an https:// server address.';
   });
-  try {
-    const { data } = await window.OB.sb.from('mcp_catalog')
-      .select('slug,title').eq('featured', true).order('title');
-    $('mcp-featured').innerHTML = (data || []).map((r) =>
-      `<button type="button" class="ghostpill" data-mslug="${esc(r.slug)}">${esc(r.title)}</button>`).join('');
-    $('mcp-featured').querySelectorAll('[data-mslug]').forEach((b) =>
-      b.addEventListener('click', () => mcpStart({ slug: b.dataset.mslug })));
-  } catch { /* catalog empty until first sync — search and URL still work */ }
 }
 
 async function handleMcpReturn() {
@@ -661,7 +829,7 @@ async function handleMcpReturn() {
 async function boot() {
   wire();
   paintRail();
-  wireMcp().catch(() => {});
+  wireCatalog();
   const returned = (await handleConnectReturn()) || (await handleMcpReturn());
   let ob;
   try { ob = await refresh(); } catch { return; }   // 401 already redirected

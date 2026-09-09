@@ -10,7 +10,7 @@
 <meta name="description" content="Name your organization, connect your sources, and verify everything works before you rely on it." />
 <link rel="stylesheet" href="./app.css?v=3" />
 <link rel="stylesheet" href="./home.css?v=3" />
-<link rel="stylesheet" href="./onboard.css?v=3" />
+<link rel="stylesheet" href="./onboard.css?v=4" />
 </head>
 <body class="home ob">
 
@@ -77,7 +77,28 @@
       its own and you write memory through the MCP tools instead &mdash; a supported
       way to run OneBrain, not a half-finished setup.</p>
 
-    <div class="srcgrid" id="srcgrid"></div>
+    <div class="catalog reveal" id="catalog" aria-labelledby="cat-title">
+      <div class="cathead">
+        <div class="cattitle">
+          <h2 id="cat-title">Integrations</h2>
+          <p class="fh">Each one asks for your consent once. OneBrain keeps
+            the connection alive after that.</p>
+        </div>
+        <div class="catfilters" role="group" aria-label="Show">
+          <button type="button" class="catfilter" data-filter="all" aria-pressed="true">All</button>
+          <button type="button" class="catfilter" data-filter="featured" aria-pressed="false">Popular</button>
+          <button type="button" class="catfilter" data-filter="connected" aria-pressed="false">Connected</button>
+        </div>
+      </div>
+      <label class="catsearch">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg>
+        <input id="cat-q" class="fi" type="search"
+               placeholder="Search integrations"
+               aria-label="Search integrations" autocomplete="off" spellcheck="false" />
+      </label>
+      <div class="srcgrid" id="srcgrid"></div>
+      <nav class="catpage" id="catpage" aria-label="Integration pages"></nav>
+    </div>
 
     <section class="wsteps reveal" id="trello-attach" hidden
              aria-labelledby="tr-title" tabindex="-1">
@@ -104,33 +125,26 @@
       </ol>
     </section>
 
-    <section class="wsteps reveal" id="mcp-more" aria-labelledby="mcp-title">
-      <h2 id="mcp-title">Hundreds more, via MCP</h2>
-      <p class="fh" style="margin-top:2px">Any remote MCP server can feed this
-        memory. Search the catalog &mdash; synced from the official MCP
-        Registry &mdash; or paste a server URL. OAuth servers ask for consent
-        once; OneBrain refreshes and rotates the tokens forever after.</p>
-      <div id="mcp-featured" class="mrow" style="flex-wrap:wrap;gap:6px"></div>
-      <div class="mrow">
-        <input id="mcp-q" class="fi" type="search"
-               placeholder="Search 1,200+ servers&hellip;"
-               aria-label="Search the MCP catalog" autocomplete="off" />
-      </div>
-      <div id="mcp-results" role="listbox" aria-label="Catalog results"></div>
+    <p class="fh" id="mcp-out" role="status" aria-live="polite"></p>
+    <div id="mcp-toolpick" class="wsteps" hidden>
+      <h2 style="font-size:18px;margin:0 0 4px">Choose what to ingest</h2>
+      <p class="fh" style="margin:0 0 8px">The tool OneBrain&rsquo;s backend will
+        poll on its normal cadence.</p>
+      <div id="mcp-tools" class="mrow" style="flex-wrap:wrap;gap:6px;margin-top:0"></div>
+    </div>
+
+    <details class="manual reveal" id="cat-advanced">
+      <summary>Don&rsquo;t see your tool? Add it by server address</summary>
+      <p class="fh" style="margin-top:8px">Any remote server that speaks the Model
+        Context Protocol can feed this memory. Paste its address &mdash; if it
+        needs a sign-in, you&rsquo;ll be asked once.</p>
       <div class="mrow">
         <input id="mcp-url" class="fi" type="url"
-               placeholder="or paste a server URL (https://&hellip;/mcp)"
-               aria-label="MCP server URL" spellcheck="false" autocomplete="off" />
+               placeholder="https://&hellip;/mcp"
+               aria-label="Server address" spellcheck="false" autocomplete="off" />
         <button type="button" class="ghostpill" id="mcp-url-go">Connect</button>
       </div>
-      <p class="fh" id="mcp-out" role="status" aria-live="polite"></p>
-      <div id="mcp-toolpick" hidden>
-        <h3 style="margin:14px 0 4px">Choose what to ingest</h3>
-        <p class="fh" style="margin:0 0 8px">The tool OneBrain's backend will
-          poll on its normal cadence.</p>
-        <div id="mcp-tools" class="mrow" style="flex-wrap:wrap;gap:6px"></div>
-      </div>
-    </section>
+    </details>
 
     <div class="acts reveal">
       <button class="cta" data-next>Continue</button>
@@ -210,6 +224,6 @@
    URL fragment, and module-land (supabase-js) may consume fragments. Stash
    it first so the wizard always receives it. */
 window.__ob_hash = location.hash;</script>
-<script type="module" src="./onboard.js?v=20"></script>
+<script type="module" src="./onboard.js?v=21"></script>
 </body>
 </html>

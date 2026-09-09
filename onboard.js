@@ -1,4 +1,5 @@
 import "./compat.js?v=12";
+import { FN } from "./env.js?v=1";
 
 /* OneBrain onboarding.
  *
@@ -695,19 +696,74 @@ async function runChecks() {
 
 // ------------------------------------------------------------------ step 4
 
+/* Done. Two things belong here and nothing else: the end-to-end path to
+ * Claude Code on THIS machine (add, sign in, ask, optional hooks), and one
+ * honest line about who else can get in. Invitations are not a wizard
+ * concern — membership is by email domain, managed in Settings. */
+const MCP_URL = `${FN}/mcp`;
+const API_URL = `${FN}/api`;
+let doneWired = false;
+
+function orgLabel() {
+  const typed = ($('ob-name').value || '').trim();
+  if (typed) return typed;
+  const org = (state.ob && state.ob.org) || '';
+  return org.startsWith('user:') ? 'Your memory' : (org || 'Your organization');
+}
+
 function renderDone() {
   const live = state.conns.filter((c) => c.status === 'ok').length;
-  const name = ($('ob-name').value || '').trim() || (state.ob && state.ob.org) || '';
+  const name = orgLabel();
   $('donesum').textContent = live
     ? `${name} is connected to ${live} source${live === 1 ? '' : 's'}, and OneBrain `
       + 'starts collecting within the minute.'
     : `${name} is ready. Nothing is ingesting automatically yet — connect a source `
       + 'from Settings whenever you want it filled for you.';
-  /* The team invite: sign-in is genuinely all a colleague needs, and /welcome
-   * walks them through the two optional minutes (their own mailbox, Claude). */
-  const invite = $('done-invite');
-  if (invite) invite.textContent = `${location.origin}${location.pathname.replace(/onboard\.html$/, "")}index.html`;
+
+  $('cc-add').textContent = `claude mcp add --transport http onebrain ${MCP_URL}`;
+  $('cc-url').textContent = MCP_URL;
+
+  const org = (state.ob && state.ob.org) || '';
+  $('done-team').textContent = org.startsWith('user:')
+    ? 'This memory is keyed to your personal address, so it is yours alone. '
+      + 'A work domain gets a shared one: everyone who signs in from it lands together.'
+    : `Anyone with a Google account at ${org} who signs in at ${location.origin} `
+      + 'lands in this memory — no invitation needed. Who is in, and who has '
+      + 'connected what, lives in Settings.';
+
+  if (!doneWired) { doneWired = true; wireDone(); }
   post('/v1/onboarding', { complete: true }).catch(() => {});
+}
+
+function wireDone() {
+  document.querySelectorAll('[data-copy]').forEach((b) => b.addEventListener('click', async () => {
+    const text = $(b.dataset.copy).textContent;
+    try {
+      await navigator.clipboard.writeText(text);
+      const was = b.textContent; b.textContent = 'Copied';
+      setTimeout(() => { b.textContent = was; }, 1800);
+    } catch { announce('Copy failed — select the text instead.'); }
+  }));
+  $('cc-mint').addEventListener('click', async () => {
+    const btn = $('cc-mint'); const out = $('cc-out');
+    if (!confirm('Mint a personal token? Any previous token of yours stops working '
+                 + 'the moment this one is created.')) return;
+    btn.disabled = true; out.textContent = 'Minting\u2026';
+    try {
+      const res = await post('/v1/me/token');
+      $('cc-install').textContent =
+        `curl -fsSL ${location.origin}/install.sh | ONEBRAIN_URL=${API_URL} `
+        + `ONEBRAIN_TOKEN=${res.token} bash`;
+      $('cc-hooks').hidden = false;
+      out.textContent = 'Run that in a terminal. It writes the hooks into '
+        + '~/.claude/settings.json and backs up anything it touches. The token is '
+        + 'shown once — minting again replaces it.';
+      btn.textContent = 'Mint again';
+      announce('Token minted — shown once.');
+    } catch (e) {
+      out.textContent = `Could not mint a token: ${String(e.message || e).slice(0, 140)}`;
+    } finally { btn.disabled = false; }
+  });
 }
 
 // ------------------------------------------------------------------- boot

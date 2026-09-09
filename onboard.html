@@ -10,7 +10,7 @@
 <meta name="description" content="Name your organization, connect your sources, and verify everything works before you rely on it." />
 <link rel="stylesheet" href="./app.css?v=3" />
 <link rel="stylesheet" href="./home.css?v=3" />
-<link rel="stylesheet" href="./onboard.css?v=9" />
+<link rel="stylesheet" href="./onboard.css?v=10" />
 </head>
 <body class="home ob">
 
@@ -263,23 +263,43 @@
     <div class="donemark" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M14 25l7 7 14-16"/></svg></div>
     <h1 id="t3" data-words>You&rsquo;re set up.</h1>
     <p class="lede reveal" id="donesum"></p>
-    <p class="lede reveal">Your team signs in with Google and sees this memory
-      immediately &mdash; no consent screen, nothing to install. Send them the
-      invite link: it welcomes them, offers to connect <em>their own</em> mailbox,
-      and wires Claude up locally.</p>
-    <div class="term reveal"><div class="termbar">
-      <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
-      <span class="shoturl">invite link &mdash; anyone on your domain</span></div>
-      <pre class="shot mono" id="done-invite" translate="no"></pre>
-    </div>
-    <p class="fh reveal">That page is for <em>you</em> too: it connects Claude
-      Code to this memory (one command, sign-in on first call) and installs the
-      automatic-memory hooks with one paste &mdash; mint your personal token
-      right on it.</p>
+
+    <section class="wsteps reveal" aria-labelledby="cc-title">
+      <h2 id="cc-title">Connect Claude Code to this memory</h2>
+      <p class="fh" style="margin-top:2px">Once per machine. From then on Claude
+        answers from what your team decided, with sources.</p>
+      <ol class="wlist">
+        <li><b>Add OneBrain.</b> In a terminal:
+          <div class="snip"><pre class="mono" id="cc-add" translate="no"></pre>
+            <button type="button" class="ghostpill" data-copy="cc-add">Copy</button></div>
+        </li>
+        <li><b>Sign in once.</b> Start <span class="mono" translate="no">claude</span>,
+          type <span class="mono" translate="no">/mcp</span>, choose
+          <b>onebrain</b>, and approve the Google sign-in that opens. It never
+          asks again on this machine.</li>
+        <li><b>Ask it something.</b> <em>&ldquo;What did we decide about
+          pricing?&rdquo;</em> &mdash; the answer comes from this memory, and
+          says where it came from.</li>
+        <li><b>Optional &mdash; automatic memory.</b> Hooks make Claude Code recall
+          before every prompt and remember after every session without being
+          asked. They need a personal token, which is shown once.
+          <div class="mrow" style="margin-top:10px">
+            <button type="button" class="ghostpill" id="cc-mint">Mint my token &amp; show the install command</button>
+          </div>
+          <div class="snip" id="cc-hooks" hidden><pre class="mono" id="cc-install" translate="no"></pre>
+            <button type="button" class="ghostpill" data-copy="cc-install">Copy</button></div>
+          <p class="fh" id="cc-out" role="status" aria-live="polite"></p>
+        </li>
+      </ol>
+      <p class="fh" style="margin:var(--u3) 0 0">Cursor, Claude Desktop or any other
+        MCP client takes the same address:
+        <b class="mono" id="cc-url" translate="no"></b></p>
+    </section>
+
+    <p class="lede reveal" id="done-team" style="margin-top:var(--u5)"></p>
+
     <div class="acts reveal">
-      <a class="cta" href="/welcome">Set up my own Claude</a>
-      <a class="textlink" href="./app.html"><span class="tl">Open the dashboard</span>
-        <span class="tlarrow" aria-hidden="true">&rarr;</span></a>
+      <a class="cta" href="./app.html">Open the dashboard<span class="ctaarrow" aria-hidden="true">&rarr;</span></a>
     </div>
   </section>
 
@@ -291,6 +311,6 @@
    URL fragment, and module-land (supabase-js) may consume fragments. Stash
    it first so the wizard always receives it. */
 window.__ob_hash = location.hash;</script>
-<script type="module" src="./onboard.js?v=26"></script>
+<script type="module" src="./onboard.js?v=27"></script>
 </body>
 </html>

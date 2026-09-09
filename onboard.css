@@ -333,6 +333,15 @@ button.textlink { background:none; border:none; cursor:pointer; padding:0; }
 
 /* ----------------------------------------------------------------- done */
 
+/* A command to copy: the text is the object, the button sits beside it. */
+.snip { display:flex; align-items:flex-start; gap:12px; margin-top:10px;
+  padding:12px 14px; border:1px solid var(--color-ash-line); border-radius:12px;
+  background:var(--sunk, #efeae7); }
+.snip pre { flex:1; margin:0; font-size:13px; line-height:1.5;
+  white-space:pre-wrap; word-break:break-all; color:var(--color-bone-white); }
+.snip .ghostpill { height:32px; padding:0 14px; flex:none; }
+.snip[hidden] { display:none; }
+
 .donemark { width:64px; height:64px; margin:0 0 var(--u4);
   border-radius:50%; border:1px solid var(--color-deep-verdant);
   display:grid; place-items:center; }

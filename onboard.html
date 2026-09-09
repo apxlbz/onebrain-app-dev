@@ -10,7 +10,7 @@
 <meta name="description" content="Name your organization, connect your sources, and verify everything works before you rely on it." />
 <link rel="stylesheet" href="./app.css?v=3" />
 <link rel="stylesheet" href="./home.css?v=3" />
-<link rel="stylesheet" href="./onboard.css?v=4" />
+<link rel="stylesheet" href="./onboard.css?v=5" />
 </head>
 <body class="home ob">
 
@@ -22,19 +22,68 @@
     <span>OneBrain</span>
   </a>
   <ol class="obrail" id="obrail" aria-label="Setup progress">
-    <li data-step="0"><span class="rdot" aria-hidden="true"></span><span class="rlab">Organization</span></li>
-    <li data-step="1"><span class="rdot" aria-hidden="true"></span><span class="rlab">Sources</span></li>
-    <li data-step="2"><span class="rdot" aria-hidden="true"></span><span class="rlab">Plan</span></li>
-    <li data-step="3"><span class="rdot" aria-hidden="true"></span><span class="rlab">Verify</span></li>
-    <li data-step="4"><span class="rdot" aria-hidden="true"></span><span class="rlab">Done</span></li>
+    <li data-step="0"><span class="rdot" aria-hidden="true"></span><span class="rlab">Welcome</span></li>
+    <li data-step="1"><span class="rdot" aria-hidden="true"></span><span class="rlab">Organization</span></li>
+    <li data-step="2"><span class="rdot" aria-hidden="true"></span><span class="rlab">Sources</span></li>
+    <li data-step="3"><span class="rdot" aria-hidden="true"></span><span class="rlab">Plan</span></li>
+    <li data-step="4"><span class="rdot" aria-hidden="true"></span><span class="rlab">Verify</span></li>
+    <li data-step="5"><span class="rdot" aria-hidden="true"></span><span class="rlab">Done</span></li>
   </ol>
   <a class="obskip" href="./app.html?skip=1" id="exit">Skip for now</a>
 </header>
 
 <main id="stepmain" tabindex="-1">
 
+  <!-- 0 ─────────────────────────────────────────────── welcome -->
+  <section class="step" data-step="0" aria-labelledby="tw">
+    <p class="eyebrow"><span class="pulse" aria-hidden="true"></span>Before we start</p>
+    <h1 id="tw" data-words>Welcome to OneBrain.</h1>
+    <p class="lede reveal">You&rsquo;re the first person from
+      <b class="mono" id="wel-domain" translate="no"></b> here, so the next few
+      minutes set up the memory everyone on your domain will share. It takes
+      about five minutes, and nothing here is hard to change later.</p>
+
+    <div class="welcome reveal">
+      <p class="welh">What OneBrain does</p>
+      <dl class="welfeat">
+        <div>
+          <dt>Captures</dt>
+          <dd>Email, meeting notes, calendars and boards flow in on their own,
+            read-only, once a source is connected.</dd>
+        </div>
+        <div>
+          <dt>Distils</dt>
+          <dd>Each item becomes short facts &mdash; decisions, commitments,
+            who knows what &mdash; deduplicated and kept current.</dd>
+        </div>
+        <div>
+          <dt>Answers</dt>
+          <dd>Your team searches it in the dashboard; your AI tools call it
+            directly. Every answer shows where it came from.</dd>
+        </div>
+      </dl>
+
+      <p class="welh">What setup covers</p>
+      <ol class="wlist welsteps">
+        <li><b>Name your organization.</b> A display name for the memory.
+          <span class="weltime">30 seconds</span></li>
+        <li><b>Connect sources.</b> Pick what should be remembered, or none
+          for now. <span class="weltime">Optional</span></li>
+        <li><b>Choose a plan.</b> Your trial credit is already in; nothing is
+          charged until billing activates. <span class="weltime">1 minute</span></li>
+        <li><b>Verify it works.</b> Live checks against every connection, so
+          you leave knowing it runs. <span class="weltime">Automatic</span></li>
+      </ol>
+    </div>
+
+    <div class="acts reveal">
+      <button class="cta" data-next>Start setup<span class="ctaarrow" aria-hidden="true">&rarr;</span></button>
+      <span class="fh">Only one person on your domain needs to do this.</span>
+    </div>
+  </section>
+
   <!-- 1 ─────────────────────────────────────────────── organization -->
-  <section class="step" data-step="0" aria-labelledby="t0">
+  <section class="step" data-step="1" aria-labelledby="t0" hidden>
     <p class="eyebrow"><span class="pulse" aria-hidden="true"></span>Step one</p>
     <h1 id="t0" data-words>Let&rsquo;s set up your organization.</h1>
     <p class="lede reveal">Everyone who signs in from your email domain shares one
@@ -70,7 +119,7 @@
   </section>
 
   <!-- 2 ────────────────────────────────────────────────── sources -->
-  <section class="step" data-step="1" aria-labelledby="t1" hidden>
+  <section class="step" data-step="2" aria-labelledby="t1" hidden>
     <p class="eyebrow"><span class="pulse" aria-hidden="true"></span>Step two &middot; optional</p>
     <h1 id="t1" data-words>Connect what you want remembered.</h1>
     <p class="lede reveal">Pick any of these, or none. With none, nothing ingests on
@@ -153,7 +202,7 @@
   </section>
 
   <!-- 3 ───────────────────────────────────────────────────── plan -->
-  <section class="step" data-step="2" aria-labelledby="tp" hidden>
+  <section class="step" data-step="3" aria-labelledby="tp" hidden>
     <p class="eyebrow"><span class="pulse" aria-hidden="true"></span>Step three</p>
     <h1 id="tp" data-words>Choose your plan.</h1>
     <p class="lede reveal">Consumption pricing, prepaid: every month your plan
@@ -169,7 +218,7 @@
   </section>
 
   <!-- 4 ─────────────────────────────────────────────────── verify -->
-  <section class="step" data-step="3" aria-labelledby="t2" hidden>
+  <section class="step" data-step="4" aria-labelledby="t2" hidden>
     <p class="eyebrow"><span class="pulse" aria-hidden="true"></span>Step four</p>
     <h1 id="t2" data-words>Now let&rsquo;s prove it works.</h1>
     <p class="lede reveal">Every line below is a real call to the real API &mdash; not
@@ -192,7 +241,7 @@
   </section>
 
   <!-- 5 ───────────────────────────────────────────────────── done -->
-  <section class="step" data-step="4" aria-labelledby="t3" hidden>
+  <section class="step" data-step="5" aria-labelledby="t3" hidden>
     <div class="donemark" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M14 25l7 7 14-16"/></svg></div>
     <h1 id="t3" data-words>You&rsquo;re set up.</h1>
     <p class="lede reveal" id="donesum"></p>
@@ -224,6 +273,6 @@
    URL fragment, and module-land (supabase-js) may consume fragments. Stash
    it first so the wizard always receives it. */
 window.__ob_hash = location.hash;</script>
-<script type="module" src="./onboard.js?v=21"></script>
+<script type="module" src="./onboard.js?v=22"></script>
 </body>
 </html>

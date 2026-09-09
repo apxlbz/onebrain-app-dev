@@ -72,6 +72,42 @@
 @keyframes obin  { from { opacity:0; transform:translateY(14px); } }
 @keyframes obout { to   { opacity:0; transform:translateY(-10px); } }
 
+/* -------------------------------------------------------------- welcome
+
+   The one page that exists to be read, not filled in. It says what the
+   product does in three lines and what the next four steps will ask, so
+   nobody arrives at "name your organization" wondering what they signed up
+   for. No cards: two mono headers and the numbered list the Trello
+   walkthrough already uses, because a list of steps is what it is. */
+
+.welcome { margin:var(--u5) 0 0; max-width:40em; }
+.welh { font-family:ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size:11px; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--color-ash-gray); margin:0 0 var(--u3); }
+.welfeat { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:var(--u4); margin:0 0 var(--u6); }
+.welfeat dt { font-size:17px; margin:0 0 6px; }
+.welfeat dd { margin:0; font-size:14px; line-height:1.5;
+  color:var(--color-silver-mist); text-wrap:pretty; }
+.welsteps { margin-top:0; }
+.welcome .wlist > li { font-size:15px; line-height:1.5; padding-right:120px; }
+.welsteps > li:first-child { border-top:0; padding-top:4px; }
+.welsteps > li:first-child::before { top:4px; }
+.welsteps b { font-weight:500; }
+.weltime { position:absolute; right:0; top:var(--u3);
+  font-family:ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size:11px; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--color-ash-gray); }
+.welsteps > li:first-child .weltime { top:4px; }
+.ctaarrow { margin-left:10px; transition:transform 200ms var(--ease-out); }
+.cta:hover .ctaarrow { transform:translateX(3px); }
+.acts .fh { margin:0; }
+@media (max-width: 720px) {
+  .welfeat { grid-template-columns:1fr; gap:var(--u3); }
+  .welcome .wlist > li { padding-right:0; }
+  .weltime { position:static; display:block; margin-top:4px; }
+}
+
 /* --------------------------------------------------------------- fields */
 
 .fields { margin:var(--u5) 0 var(--u6); max-width:34em; }

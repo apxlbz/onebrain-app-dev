@@ -112,11 +112,14 @@ function show(next, { back = false } = {}) {
   setTimeout(swap, 160);
 }
 
+/* Step indices: 0 welcome, 1 organization, 2 sources, 3 plan, 4 verify, 5 done. */
+const STEP = { welcome: 0, org: 1, sources: 2, plan: 3, verify: 4, done: 5 };
+
 function onEnter(i) {
-  if (i === 1) renderSources();
-  if (i === 2) renderPlans();
-  if (i === 3) { runChecks(); }
-  if (i === 4) renderDone();
+  if (i === STEP.sources) renderSources();
+  if (i === STEP.plan) renderPlans();
+  if (i === STEP.verify) { runChecks(); }
+  if (i === STEP.done) renderDone();
 }
 
 // ------------------------------------------------------------------ step 1
@@ -466,8 +469,8 @@ async function handleConnectReturn() {
   if (!hadTokens || !provider) return false;
   history.replaceState(null, '', location.pathname);
   sessionStorage.removeItem('ob_connect_provider');
-  state.step = 1;                       // land back on the sources step
-  steps.forEach((el, i) => { el.hidden = i !== 1; });
+  state.step = STEP.sources;            // land back on the sources step
+  steps.forEach((el, i) => { el.hidden = i !== STEP.sources; });
   paintRail();
   if (provider === 'trello') {
     try {
@@ -683,13 +686,13 @@ async function refresh() {
  * API came back — the click was simply dropped, which reads as a broken page. */
 function wire() {
   document.querySelectorAll('[data-next]').forEach((b) => b.addEventListener('click', async () => {
-    if (state.step === 0) {
+    if (state.step === STEP.org) {
       b.disabled = true;
       try { await saveOrg(); } catch { /* naming is not worth blocking setup */ }
       b.disabled = false;
     }
-    if (state.step === 1) { try { await refresh(); } catch { /* keep going */ } }
-    if (state.step === 2 && $('plan-next').disabled) return;
+    if (state.step === STEP.sources) { try { await refresh(); } catch { /* keep going */ } }
+    if (state.step === STEP.plan && $('plan-next').disabled) return;
     show(Math.min(state.step + 1, steps.length - 1));
   }));
   document.querySelectorAll('[data-back]').forEach((b) =>
@@ -805,8 +808,8 @@ async function handleMcpReturn() {
   const short = new URLSearchParams(location.search).get('mcp');
   if (!short) return false;
   history.replaceState(null, '', location.pathname);
-  state.step = 1;
-  steps.forEach((el, i) => { el.hidden = i !== 1; });
+  state.step = STEP.sources;
+  steps.forEach((el, i) => { el.hidden = i !== STEP.sources; });
   paintRail();
   const provider = `mcp:${mcpShort(short)}`;
   const out = $('mcp-out');
@@ -834,7 +837,15 @@ async function boot() {
   let ob;
   try { ob = await refresh(); } catch { return; }   // 401 already redirected
   $('ob-domain').textContent = ob.org || '';
+  $('wel-domain').textContent = ob.org || 'your domain';
   if (ob.display_name) $('ob-name').value = ob.display_name;
+  /* The welcome is for the first visit. Someone who already named the
+   * organization has read it; a return visit lands on the first real step. */
+  if (ob.display_name && !returned && state.step === STEP.welcome) {
+    state.step = STEP.org;
+    steps.forEach((el, i) => { el.hidden = i !== STEP.org; });
+    paintRail();
+  }
   $('ob-name').placeholder = ob.org || 'Acme Inc.';
   if (ob.steps) {
     if (ob.steps.team) $('ob-team').value = ob.steps.team;

@@ -18,7 +18,9 @@ set -euo pipefail
 
 # Filled in by the sync that publishes this file to each site.
 URL_DEFAULT="https://epjkzltwyfexiunbmbel.supabase.co/functions/v1/api"
-case "$URL_DEFAULT" in https://epjkzltwyfexiunbmbel.supabase.co/functions/v1/api) URL_DEFAULT="" ;; esac
+# Unfilled (running from the repo)? Then there is no default. The literal
+# is split in two so the sync's substitution cannot touch this line.
+[ "$URL_DEFAULT" = "__API""_URL__" ] && URL_DEFAULT=""
 CFG_DIR="$HOME/.config/onebrain"
 HOOK_DIR="$CFG_DIR/hooks"
 

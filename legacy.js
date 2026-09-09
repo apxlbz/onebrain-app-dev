@@ -1,4 +1,4 @@
-import "./compat.js?v=11";
+import "./compat.js?v=12";
 import { FN } from "./env.js?v=1";
 
 /* OneBrain dashboard.

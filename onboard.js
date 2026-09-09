@@ -1,4 +1,4 @@
-import "./compat.js?v=11";
+import "./compat.js?v=12";
 
 /* OneBrain onboarding.
  *
@@ -284,7 +284,7 @@ function wireCards(root) {
   root.querySelectorAll('[data-mslug]').forEach((b) =>
     b.addEventListener('click', () => {
       b.querySelector('.srcstate').textContent = 'Checking\u2026';
-      mcpStart({ slug: b.dataset.mslug });
+      mcpStart({ slug: b.dataset.mslug, card: b });
     }));
   loadLogos(root);
 }
@@ -781,7 +781,7 @@ const mcpShort = (s) => (String(s).split('/').pop() || 'server')
 function mcpToolPick(tools, onPick) {
   const box = $('mcp-tools');
   if (!tools.length) {
-    $('mcp-out').textContent += ' — the server lists no tools.';
+    $('mcp-out').textContent += ' — the server lists no tools, so there is nothing to ingest.';
     return;
   }
   box.innerHTML = tools.map((t) =>
@@ -792,8 +792,12 @@ function mcpToolPick(tools, onPick) {
     b.addEventListener('click', () => onPick(b.dataset.mtool)));
 }
 
-async function mcpStart({ slug, url }) {
+async function mcpStart({ slug, url, card }) {
   const out = $('mcp-out');
+  /* The clicked card shows the outcome too — the status line lives below a
+   * long list, and a card that says "Checking…" forever reads as stuck. */
+  const st = card ? card.querySelector('.srcstate') : null;
+  const say = (msg) => { if (st) st.textContent = msg; };
   $('mcp-toolpick').hidden = true;
   out.textContent = 'Checking the server…';
   const short = mcpShort(slug ||
@@ -805,19 +809,28 @@ async function mcpStart({ slug, url }) {
     });
     if (res.auth === 'oauth') {
       out.textContent = 'Handing you to the provider for consent…';
+      say('Heading to the provider\u2026');
       location.href = res.authorize_url;
       return;
     }
     out.textContent = `${res.server?.name || 'Server'} is reachable — choose what to ingest.`;
+    say('Reachable \u2014 choose what to ingest below');
     mcpToolPick(res.tools || [], async (tool) => {
       try {
         const r = await post('/v1/connections/mcp', { slug: short, url: res.url, tool });
         out.textContent = `Connected ${r.connected} — the backend polls it from the next sweep.`;
         $('mcp-toolpick').hidden = true;
         announce(`Connected ${r.connected}.`);
-      } catch (e) { out.textContent = `Failed: ${e.message || e}`; }
+        try { await refresh(); } catch { /* render what we have */ }
+        renderSources();
+      } catch (e) { out.textContent = `Failed: ${e.message || e}`; say(String(e.message || e).slice(0, 80)); }
     });
-  } catch (e) { out.textContent = `Failed: ${e.message || e}`; }
+    $('mcp-toolpick').scrollIntoView({ behavior: reduced.matches ? 'auto' : 'smooth', block: 'nearest' });
+  } catch (e) {
+    out.textContent = `Failed: ${e.message || e}`;
+    say(String(e.message || e).slice(0, 80));
+    if (card) card.dataset.on = 'err';
+  }
 }
 
 function wireCatalog() {

@@ -281,6 +281,9 @@ window.OB = {
     if (path === "/v1/billing/portal") return await fnCall("/v1/billing/portal", body);
     if (path === "/v1/connections/google") return await fnCall("/v1/connections/google", body);
     if (path === "/v1/connections/trello") return await fnCall("/v1/connections/trello", body);
+    // Remote (MCP) sources: start, tools, tool, and the authless finish all
+    // live on the api function under the same paths.
+    if (path.startsWith("/v1/connections/mcp")) return await fnCall(path, body);
     throw new Error(`this action isn't wired to the new engine yet (${path})`);
   },
   signout() { sb.auth.signOut().then(() => { location.href = "./index.html"; }); },

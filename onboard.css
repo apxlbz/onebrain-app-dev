@@ -296,6 +296,10 @@ button.textlink { background:none; border:none; cursor:pointer; padding:0; }
   background-position:calc(100% - 22px) 19px, calc(100% - 16px) 19px; }
 .mtp[hidden] { display:none; }
 .mtp-acts { margin-top:var(--u4); }
+/* On Sources the actions lead: the list below is long, and "what next" must
+   not depend on reaching its end. */
+.acts-top { margin:var(--u4) 0 0; }
+.acts-top + .catalog { margin-top:var(--u6); }
 
 /* --------------------------------------------------------------- verify */
 

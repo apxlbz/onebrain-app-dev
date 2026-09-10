@@ -805,7 +805,8 @@ function sweepLine(c) {
   catch (e) { return `<div class="dim" style="font-size:12px">Last sweep: could not read its record (${esc(String(e.message || e))})</div>`; }
 }
 function sweepLineInner(c) {
-  const s = c.last_sweep;
+  let s = c.last_sweep;
+  if (typeof s === 'string') { try { s = JSON.parse(s); } catch { return ''; } }
   if (!s || typeof s !== 'object') return '';
   const parts = [];
   if (s.tool) parts.push(`reads through ${esc(String(s.tool).replace(/^[a-z0-9]+[-_.]/i, '').replace(/[-_]+/g, ' '))}`);

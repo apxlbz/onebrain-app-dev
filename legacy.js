@@ -804,6 +804,7 @@ function sweepLine(c) {
   const parts = [];
   if (s.tool) parts.push(`reads through ${esc(String(s.tool).replace(/^[a-z0-9]+[-_.]/i, '').replace(/[-_]+/g, ' '))}`);
   parts.push(`${n(s.items || 0)} item${s.items === 1 ? '' : 's'} listed`);
+  if (s.refs) parts.push(`${n(s.refs)} page${s.refs === 1 ? '' : 's'} found${s.unseen != null ? `, ${n(s.unseen)} not read yet` : ''}`);
   if (s.fetcher) parts.push(`${n(s.fetched || 0)} fetched via ${esc(String(s.fetcher).replace(/^[a-z0-9]+[-_.]/i, '').replace(/[-_]+/g, ' '))}${s.failed ? `, ${n(s.failed)} failed` : ''}`);
   parts.push(`${n(s.fresh || 0)} new, ${n(s.facts || 0)} fact${s.facts === 1 ? '' : 's'}`);
   const note = s.note ? ` — ${esc(s.note)}` : '';

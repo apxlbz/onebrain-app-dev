@@ -795,6 +795,21 @@ const SOURCE_LABEL = {
   gmail: 'Gmail', google_meet: 'Google Meet',
   google_calendar: 'Google Calendar', trello: 'Trello',
 };
+/* What the last sweep did, in one line — the worker writes this onto the
+ * connection so the dashboard can say "listed 40 pages, fetched 25, 12 facts"
+ * instead of sending anyone to the function logs. */
+function sweepLine(c) {
+  const s = c.last_sweep;
+  if (!s) return '';
+  const parts = [];
+  if (s.tool) parts.push(`reads through ${esc(String(s.tool).replace(/^[a-z0-9]+[-_.]/i, '').replace(/[-_]+/g, ' '))}`);
+  parts.push(`${n(s.items || 0)} item${s.items === 1 ? '' : 's'} listed`);
+  if (s.fetcher) parts.push(`${n(s.fetched || 0)} fetched via ${esc(String(s.fetcher).replace(/^[a-z0-9]+[-_.]/i, '').replace(/[-_]+/g, ' '))}${s.failed ? `, ${n(s.failed)} failed` : ''}`);
+  parts.push(`${n(s.fresh || 0)} new, ${n(s.facts || 0)} fact${s.facts === 1 ? '' : 's'}`);
+  const note = s.note ? ` — ${esc(s.note)}` : '';
+  const sample = s.sample ? `<div class="dim mono" style="font-size:11px;margin-top:4px;white-space:normal">first item: ${esc(String(s.sample).slice(0, 120))}</div>` : '';
+  return `<div class="dim" style="font-size:12px;margin-top:${c.last_error ? 6 : 0}px">Last sweep ${s.at ? esc(ago(s.at)) : ''}: ${parts.join(' · ')}${note}</div>${sample}`;
+}
 /* A remote source is stored as "mcp:<short-name>"; the person sees the name. */
 const sourceLabel = (provider) => SOURCE_LABEL[provider]
   || (String(provider).startsWith('mcp:')
@@ -828,9 +843,10 @@ async function viewSources(root) {
              <td>${c.status === 'ok' ? '<span class="pill ok">verified</span>'
                  : `<span class="pill">${esc(c.status || 'pending')}</span>`}</td>
              <td>${c.last_ok_at ? esc(ago(c.last_ok_at)) : '—'}</td>
-             <td>${c.last_error ? `<span class="dim" style="white-space:normal">${esc(String(c.last_error).slice(0, 240))}</span>${
+             <td style="white-space:normal">${c.last_error ? `<span class="dim">${esc(String(c.last_error).slice(0, 240))}</span>${
                  String(c.provider).startsWith('mcp:')
-                   ? ` <a class="ghost" href="./onboard.html?repair=${encodeURIComponent(c.provider)}">Fix now</a>` : ''}` : ''}</td>
+                   ? ` <a class="ghost" href="./onboard.html?repair=${encodeURIComponent(c.provider)}">Fix now</a>` : ''}` : ''}${
+                 sweepLine(c)}</td>
              <td class="num">${n(counts[c.provider] || 0)}</td>
            </tr>`).join('')}</tbody></table>`
         : `<div class="empty"><b>Nothing is connected</b>Connect Gmail, Google Meet,

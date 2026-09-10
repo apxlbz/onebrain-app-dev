@@ -257,8 +257,13 @@ async function routeGet(path) {
   if (p === "/v1/connections") {
     needAuth();
     const { data } = await sb.from("connections")
-      .select("provider,member_email,connection_id,status,last_ok_at,last_error");
-    return { connections: data ?? [] };
+      .select("provider,member_email,connection_id,status,last_ok_at,last_error,config");
+    // config carries the worker's account of the last sweep (__last_sweep)
+    // and, for remote sources, the tool it reads through — never a secret.
+    return { connections: (data ?? []).map((c) => ({
+      ...c, config: undefined,
+      tool: c.config?.tool ?? null, last_sweep: c.config?.__last_sweep ?? null,
+    })) };
   }
   throw new Error(`this view isn't wired to the new engine yet (${p})`);
 }

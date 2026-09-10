@@ -39,7 +39,9 @@ const n = (v) => NUM.format(v || 0);
  *  `title` so the exact value is one hover away. */
 function ago(iso) {
   if (!iso) return '—';
-  const s = (Date.now() - new Date(iso).getTime()) / 1000;
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return '—';        // a bad timestamp must never break a view
+  const s = (Date.now() - t) / 1000;
   if (s < 60) return 'just now';
   if (s < 3600) return `${Math.floor(s / 60)}m ago`;
   if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
@@ -799,8 +801,12 @@ const SOURCE_LABEL = {
  * connection so the dashboard can say "listed 40 pages, fetched 25, 12 facts"
  * instead of sending anyone to the function logs. */
 function sweepLine(c) {
+  try { return sweepLineInner(c); }
+  catch (e) { return `<div class="dim" style="font-size:12px">Last sweep: could not read its record (${esc(String(e.message || e))})</div>`; }
+}
+function sweepLineInner(c) {
   const s = c.last_sweep;
-  if (!s) return '';
+  if (!s || typeof s !== 'object') return '';
   const parts = [];
   if (s.tool) parts.push(`reads through ${esc(String(s.tool).replace(/^[a-z0-9]+[-_.]/i, '').replace(/[-_]+/g, ' '))}`);
   parts.push(`${n(s.items || 0)} item${s.items === 1 ? '' : 's'} listed`);

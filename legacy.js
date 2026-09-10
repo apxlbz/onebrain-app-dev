@@ -795,6 +795,11 @@ const SOURCE_LABEL = {
   gmail: 'Gmail', google_meet: 'Google Meet',
   google_calendar: 'Google Calendar', trello: 'Trello',
 };
+/* A remote source is stored as "mcp:<short-name>"; the person sees the name. */
+const sourceLabel = (provider) => SOURCE_LABEL[provider]
+  || (String(provider).startsWith('mcp:')
+    ? provider.slice(4).replace(/[-_]+/g, ' ').replace(/^./, (c) => c.toUpperCase())
+    : provider);
 
 async function viewSources(root) {
   root.innerHTML = '<div class="spin">Loading…</div>';
@@ -818,12 +823,14 @@ async function viewSources(root) {
         ? `<table class="t"><thead><tr><th>Source</th><th>State</th>
              <th>Last verified</th><th>Trouble</th><th class="num">Facts</th></tr></thead>
            <tbody>${rows.map((c) => `<tr>
-             <td>${esc(SOURCE_LABEL[c.provider] || c.provider)}${c.member_email
+             <td>${esc(sourceLabel(c.provider))}${c.member_email
                  ? ` <span class="dim mono">${esc(c.member_email)}</span>` : ''}</td>
              <td>${c.status === 'ok' ? '<span class="pill ok">verified</span>'
                  : `<span class="pill">${esc(c.status || 'pending')}</span>`}</td>
              <td>${c.last_ok_at ? esc(ago(c.last_ok_at)) : '—'}</td>
-             <td>${c.last_error ? `<span class="dim">${esc(String(c.last_error).slice(0, 90))}</span>` : ''}</td>
+             <td>${c.last_error ? `<span class="dim" style="white-space:normal">${esc(String(c.last_error).slice(0, 240))}</span>${
+                 String(c.provider).startsWith('mcp:')
+                   ? ` <a class="ghost" href="./onboard.html?repair=${encodeURIComponent(c.provider)}">Fix now</a>` : ''}` : ''}</td>
              <td class="num">${n(counts[c.provider] || 0)}</td>
            </tr>`).join('')}</tbody></table>`
         : `<div class="empty"><b>Nothing is connected</b>Connect Gmail, Google Meet,

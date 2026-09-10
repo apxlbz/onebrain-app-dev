@@ -1105,14 +1105,17 @@ function wireCatalog() {
 async function handleMcpReturn() {
   // The OAuth callback bounces here with ?mcp=<short-slug>; the connection
   // already exists — what's left is choosing the ingestion tool.
-  const short = new URLSearchParams(location.search).get('mcp');
-  if (!short) return false;
+  // The dashboard's "Fix now" link arrives with ?repair=mcp:<short-slug>.
+  const params = new URLSearchParams(location.search);
+  const short = params.get('mcp');
+  const repair = params.get('repair');
+  if (!short && !repair) return false;
   history.replaceState(null, '', location.pathname);
   state.step = STEP.sources;
   steps.forEach((el, i) => { el.hidden = i !== STEP.sources; });
   paintRail();
-  const provider = `mcp:${mcpShort(short)}`;
-  const label = mcpShort(short).replace(/[-_]+/g, ' ').replace(/^./, (c) => c.toUpperCase());
+  const provider = repair && repair.startsWith('mcp:') ? repair : `mcp:${mcpShort(short || repair)}`;
+  const label = provider.slice(4).replace(/[-_]+/g, ' ').replace(/^./, (c) => c.toUpperCase());
   /* Not awaited: the live tool check can take seconds, and the step — with
    * its Continue — must be on screen and usable while it runs. */
   mcpRepair(provider, label, null);

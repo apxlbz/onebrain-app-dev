@@ -67,6 +67,8 @@ async function memories(params) {
     .select("id,content,type,entity,product,topic,system,tags,created_at," +
             "happened_at,is_current,importance,memory_raw!inner(source,metadata)",
             { count: "exact" });
+  // "Show superseded" must never surface what was forgotten.
+  sel = sel.is("forgotten_at", null);
   if (!history) sel = sel.or("is_current.is.null,is_current.is.true");
   if (type) sel = sel.eq("type", type);
   if (source) sel = sel.eq("memory_raw.source", source);
@@ -90,7 +92,7 @@ async function memories(params) {
 async function factDetail(id) {
   const { data, error } = await sb.from("knowledge")
     .select("*,memory_raw(source,metadata,content,created_at)")
-    .eq("id", id).maybeSingle();
+    .eq("id", id).is("forgotten_at", null).maybeSingle();
   if (error || !data) throw new Error(error?.message ?? "not found");
   return {
     ...data,

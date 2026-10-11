@@ -31,6 +31,17 @@ const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g,
   (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+// /v1/recall frames each result's content in <memory_item> tags for LLM
+// consumers; the dashboard shows the plain text.
+const unframe = (s) => {
+  let t = String(s == null ? '' : s);
+  for (;;) {
+    const n = t.replace(/<\/?\s*(?:memory_item|recalled_memory)\b[^>]*>/gi, '');
+    if (n === t) return t.trim();
+    t = n;
+  }
+};
+
 const NUM = new Intl.NumberFormat();
 const n = (v) => NUM.format(v || 0);
 
@@ -634,7 +645,7 @@ function hitHTML(r, i) {
     <div class="hit" data-id="${esc(r.id)}">
       <div class="hrank num" aria-hidden="true">${i + 1}</div>
       <div class="hbody">
-        <div class="hc">${esc(r.content)}</div>
+        <div class="hc">${esc(unframe(r.content))}</div>
         <div class="hm">
           <span class="pill">${esc(r.source || '—')}</span>
           ${r.scoped === false && (SEARCH.source || SEARCH.type)
@@ -1326,7 +1337,7 @@ const palette = {
       .filter(([k, v]) => !q || k.includes(q) || v.title.toLowerCase().includes(q))
       .map(([k, v]) => ({ label: v.title, kind: 'Go to', to: k }));
     palette.items = [...tabs, ...hits.map((h) => ({
-      label: h.content, kind: h.source || 'memory', fact: h.id }))];
+      label: unframe(h.content), kind: h.source || 'memory', fact: h.id }))];
     palette.at = 0;
     const box = $('presults');
     box.innerHTML = palette.items.length

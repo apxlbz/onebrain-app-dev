@@ -699,7 +699,7 @@ async function viewPeople(root, params) {
           <span class="pill">${n(p.fact_count ?? (p.evidence || []).length)} facts</span>
         </div>
         ${(p.evidence || []).map((e) => `<div class="hit" data-id="${esc(e.id || '')}">
-          <div class="hbody"><div class="hc">${esc(e.content || e)}</div></div>
+          <div class="hbody"><div class="hc">${esc(unframe(e.content || e))}</div></div>
         </div>`).join('')}
       </section>`).join('');
     out.querySelectorAll('[data-id]').forEach((d) => {

@@ -10,6 +10,7 @@ function confirmWord(org) {
   return name.startsWith('user:') ? name.slice(5) : name;
 }
 import { FN } from "./env.js?v=1";
+import { badgeHTML } from "./badge.js?v=1";
 
 /* OneBrain dashboard.
  *
@@ -307,7 +308,7 @@ async function viewMemories(root, params) {
     const to = Math.min(data.offset + data.items.length, data.total);
     list.innerHTML = `
       <table class="t"><thead><tr>
-        <th style="width:50%">Fact</th><th style="width:13%">Source</th>
+        <th style="width:50%">Fact</th><th style="width:13%">Source</th><th style="width:13%">Written by</th>
         <th style="width:11%">Type</th><th style="width:15%">About</th>
         <th style="width:11%">When</th>
       </tr></thead><tbody>
@@ -317,6 +318,7 @@ async function viewMemories(root, params) {
           <td><span class="clamp2">${esc(f.content)}</span>${f.is_current ? ''
             : ' <span class="pill" title="A newer fact replaced this">superseded</span>'}</td>
           <td class="tight">${esc(f.source)}</td>
+          <td class="tight">${badgeHTML({ source: f.source, metadata: f.memory_raw && f.memory_raw.metadata }, esc)}</td>
           <td class="tight">${esc(f.type)}</td>
           <td class="tight">${esc([f.entity, f.product, f.topic, f.system]
             .filter(Boolean)[0] || '—')}</td>
@@ -450,6 +452,7 @@ async function openFact(id, opener) {
       <h2 class="sec" id="h-det">Details</h2>
       <div class="kv">
         <span class="k">Source</span><span class="v">${esc(f.source || '—')}</span>
+        <span class="k">Written by</span><span class="v">${badgeHTML({ source: f.source, metadata: f.memory_raw && f.memory_raw.metadata }, esc)}</span>
         <span class="k">Recorded</span><span class="v" title="${esc(exact(f.created_at))}">${ago(f.created_at)}</span>
         ${f.happened_at ? `<span class="k">Happened</span><span class="v" title="${
           esc(exact(f.happened_at))}">${ago(f.happened_at)}</span>` : ''}
@@ -648,6 +651,7 @@ function hitHTML(r, i) {
         <div class="hc">${esc(unframe(r.content))}</div>
         <div class="hm">
           <span class="pill">${esc(r.source || '—')}</span>
+          ${badgeHTML(r, esc)}
           ${r.scoped === false && (SEARCH.source || SEARCH.type)
             ? '<span class="pill" title="Your filter was too narrow, so general memory filled in">unscoped fallback</span>'
             : ''}

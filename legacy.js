@@ -946,6 +946,16 @@ async function viewSettings(root) {
     </section>
 
 
+    <section class="card" style="margin-bottom:14px" aria-labelledby="h-memmd">
+      <h2 class="sec" id="h-memmd">Memory.md</h2>
+      <p class="dim" style="margin:-4px 0 12px">A short file that teaches any agent
+        when to recall and remember, personalised with your endpoint. Drop it
+        in a CLAUDE.md or AGENTS.md.</p>
+      <p style="margin:0"><button class="btnlink" id="memmdgo">Download Memory.md</button>
+        <span class="dim" id="memmdout" role="status" style="margin-left:10px"></span></p>
+    </section>
+
+
     <section class="card" style="margin-bottom:14px" aria-labelledby="h-export">
       <h2 class="sec" id="h-export">Take your data</h2>
       <p class="dim" style="margin:-4px 0 12px">Everything, as portable JSON —
@@ -1021,6 +1031,25 @@ async function viewSettings(root) {
       $('expout').textContent = 'Downloaded.';
     } catch (e) {
       $('expout').textContent = `Failed: ${e.message || e}`;
+    } finally { btn.disabled = false; }
+  });
+
+  $('memmdgo').addEventListener('click', async () => {
+    const btn = $('memmdgo');
+    btn.disabled = true; $('memmdout').textContent = 'Preparing…';
+    try {
+      const r = await fetch(`${FN}/api/memory.md`, {
+        headers: { Authorization: `Bearer ${window.OB.token()}` },
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(await r.blob());
+      a.download = 'Memory.md';
+      a.click();
+      URL.revokeObjectURL(a.href);
+      $('memmdout').textContent = 'Downloaded.';
+    } catch (e) {
+      $('memmdout').textContent = `Failed: ${e.message || e}`;
     } finally { btn.disabled = false; }
   });
 

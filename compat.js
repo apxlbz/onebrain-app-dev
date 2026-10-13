@@ -220,7 +220,7 @@ async function routeGet(path) {
     const { data } = await sb.from("onboarding").select("*").maybeSingle();
     const { data: org } = await sb.from("orgs").select("name,display_name").maybeSingle();
     return { ...(data ?? { completed_at: null }),
-             org: org?.display_name || org?.name || "" };
+             org: org?.display_name || org?.name || "", org_name: org?.name || "" };
   }
   if (p === "/v1/memory-types") {
     const s = await stats();

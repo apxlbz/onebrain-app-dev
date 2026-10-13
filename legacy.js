@@ -1249,7 +1249,7 @@ async function viewUsage(root) {
     try {
       const active = u.plan && u.plan.status === 'active';
       const res = await post(active ? '/v1/billing/portal' : '/v1/billing/checkout',
-        { plan: u.plan?.plan_code || u.plan?.code || 'starter',
+        { plan: u.plan?.plan_code || u.plan?.code || 'pro',
           return_base: location.origin + location.pathname.replace(/\/app\.html$/, '') });
       if (res.url) location.href = res.url;
       else out.textContent = 'No URL returned';

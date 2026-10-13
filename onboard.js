@@ -481,11 +481,12 @@ async function renderPlans() {
       <button class="srccard" role="radio" data-plan="${esc(pl.code)}"
               aria-checked="${pl.code === chosen}" data-on="${pl.code === chosen ? '1' : '0'}">
         <span class="srcname">${esc(pl.name)}<span class="sd" aria-hidden="true"></span></span>
-        <span class="srcwhat">$${Number(pl.usd_month)}/month &mdash; ${esc(pl.display_tokens)} included, rolls over</span>
+        <span class="srcwhat">${Number(pl.usd_month) ? `$${Number(pl.usd_month)}${pl.per_seat ? ' per seat' : ''}/month` : '$0'} &mdash; ${esc(pl.display_limits)}</span>
         <span class="srcstate">${pl.code === chosen ? 'Selected' : 'Choose'}</span>
       </button>`).join('');
-    out.textContent = `Balance: $${Number(b.balance_usd).toFixed(2)} — this month’s use: `
-      + `${(b.month_tokens / 1e6).toFixed(2)}M tokens ($${Number(b.month_spend_usd).toFixed(4)})`;
+    out.textContent = b.free_tier
+      ? `Facts stored: ${b.free_tier.facts} of ${b.free_tier.max_facts} on Free`
+      : '';
     $('plan-next').disabled = !chosen;
     grid.querySelectorAll('[data-plan]').forEach((card) => {
       card.addEventListener('click', async () => {

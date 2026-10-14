@@ -85,23 +85,24 @@
   <h2 id="tools">Tools</h2>
   <table>
     <tr><th>Tool</th><th>What it does</th><th>Kind</th></tr>
-    <tr><td><code>recall</code></td><td>Searches the memory for anything the team
-      decided, agreed, or discussed. Returns facts with their source, type, and
-      dates. Optional filters: <code>source</code>, <code>type</code>,
-      <code>limit</code>.</td><td>Read</td></tr>
-    <tr><td><code>who_knows</code></td><td>Who on the team has demonstrated
-      knowledge of a topic, ranked by the facts that prove it.</td><td>Read</td></tr>
-    <tr><td><code>graph_neighbors</code></td><td>The relationships around a person,
-      project, product, or system, out to a chosen depth.</td><td>Read</td></tr>
-    <tr><td><code>list_memory</code></td><td>Which sources and kinds of facts the
-      memory holds, with counts.</td><td>Read</td></tr>
-    <tr><td><code>remember</code></td><td>Saves a decision, fact, or note from the
-      conversation so everyone has it next time. Adds only; never edits or
-      deletes.</td><td>Write</td></tr>
+    <tr><td><code>recall</code></td><td>Searches your memory, shared across your
+      agents, for preferences, decisions, people, and projects. Returns facts with
+      their ids, the agent that wrote them, type, and dates. Optional filters:
+      <code>source</code>, <code>type</code>, <code>limit</code>.</td><td>Read</td></tr>
+    <tr><td><code>remember</code></td><td>Saves a durable preference, fact, or
+      decision so every connected agent has it next time. Pass
+      <code>replaces</code> with recalled ids to correct older facts.</td><td>Write</td></tr>
+    <tr><td><code>forget</code></td><td>Permanently deletes memories by id, when
+      you ask an agent to drop something.</td><td>Write</td></tr>
+    <tr><td><code>list_memory</code></td><td>Which agents wrote to the memory and
+      which kinds of facts it holds, with counts.</td><td>Read</td></tr>
   </table>
+  <p>Shared (team) memories also list <code>who_knows</code> (who has
+    demonstrated knowledge of a topic) and <code>graph_neighbors</code> (the
+    relationships around a person, project, or system).</p>
   <p>Read tools carry the <code>readOnlyHint</code> annotation and run without a
-    per-call confirmation in Claude. <code>remember</code> is the only tool that
-    writes, and Claude asks before calling it.</p>
+    per-call confirmation in Claude. <code>remember</code> and <code>forget</code>
+    write, and Claude asks before calling them.</p>
   <h3>Example prompts</h3>
   <ul>
     <li>&ldquo;What did we decide about pricing?&rdquo;</li>

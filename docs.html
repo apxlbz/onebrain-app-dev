@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>OneBrain — Documentation</title>
-<meta name="description" content="How to connect OneBrain, your organization's shared memory, to Claude and other assistants; what each tool does; how data is handled." />
+<meta name="description" content="Quickstart, API reference, FAQ and architecture for OneBrain: one memory shared across every AI agent you use." />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 3 30 27H2Z' fill='%232b59d1'/%3E%3C/svg%3E" />
 <style>
   :root{--paper:#f6f3f1;--ink:#1f1d1a;--muted:#6f6a61;--lake:#2b59d1;--line:#e4ded6;--sunk:#efeae7;
@@ -33,24 +33,46 @@
 <body>
 <main>
   <h1>OneBrain documentation</h1>
-  <p class="muted">Your organization&rsquo;s shared memory, connected to the assistants
-    you already use. Questions: <a href="mailto:or@apxlbz.com">or@apxlbz.com</a></p>
+  <p class="muted">One memory, shared across every AI agent you use.
+    Questions: <a href="mailto:or@apxlbz.com">or@apxlbz.com</a></p>
   <nav class="toc">
-    <a href="#what">What it is</a><a href="#connect">Connect to Claude</a>
-    <a href="#tools">Tools</a><a href="#other">Other assistants</a>
+    <a href="#quickstart">Quickstart</a><a href="#what">What it is</a>
+    <a href="#connect">Connect to Claude</a><a href="#tools">Tools</a>
+    <a href="#other">Other assistants</a><a href="#api">API reference</a>
+    <a href="#architecture">Architecture</a><a href="#faq">FAQ</a>
     <a href="#data">Your data</a><a href="#trouble">Troubleshooting</a>
   </nav>
 
+  <h2 id="quickstart">Quickstart</h2>
+  <ol>
+    <li>Sign in at <a href="https://onebrain.apxlbz.com">onebrain.apxlbz.com</a>
+      with Google. A personal memory exists immediately &mdash; no setup, no
+      source connections, no API keys.</li>
+    <li>Connect an agent, for example Claude Code:
+      <pre>claude mcp add --transport http onebrain https://qlpfjeciekaqzribxlnp.supabase.co/functions/v1/mcp</pre>
+      run <code>/mcp</code>, choose <b>onebrain</b>, and approve the Google
+      sign-in. See <a href="#connect">Connect OneBrain to Claude</a> for every
+      client, and <a href="#other">Other assistants</a> for everything else.</li>
+    <li>Tell one agent something (&ldquo;remember that launch moved to
+      October 14&rdquo;), then ask a <i>different</i> agent about it. Same
+      memory, every agent.</li>
+  </ol>
+
   <h2 id="what">What OneBrain is</h2>
-  <p>OneBrain reads the places where your team already works &mdash; Gmail, Google
-    Meet notes, Google Calendar, Trello, and over a thousand other tools through
-    their own MCP servers &mdash; and distils them into short, deduplicated facts:
-    decisions, commitments, who knows what, and why. Every fact keeps its source.
-    Your team searches it in the dashboard; your assistants call it directly.</p>
+  <p>OneBrain is one long-term memory that every AI agent you use &mdash; Claude,
+    ChatGPT, Cursor, your own agents &mdash; reads and writes through one
+    standard MCP endpoint. What one agent learns, the others can recall: a
+    preference, a decision, a fact about a project. Every fact keeps the agent
+    that wrote it and when.</p>
   <p>Every sign-in gets a private memory of its own, work address or personal:
     nobody else, not even a coworker on the same domain, can reach a single row.
-    Teams that already share a domain memory keep it as a shared space; members
-    reach it by adding <code>?space=&lt;domain&gt;</code> to the connector URL.</p>
+    Organizations that set up a shared domain memory before this changed keep it
+    as a shared space; members reach it by adding <code>?space=&lt;domain&gt;</code>
+    to the connector URL.</p>
+  <p>OneBrain does not read your Gmail, Calendar, Drive or Trello on its own.
+    Memory comes only from what you and your agents explicitly <code>remember</code>
+    &mdash; through a conversation, a hook, or the <a href="#other">Memory.md</a>
+    file every connected agent follows.</p>
 
   <h2 id="connect">Connect OneBrain to Claude</h2>
   <p>OneBrain is a remote MCP server. Claude connects to it the way it connects to
@@ -58,10 +80,8 @@
   <h3>Before you start</h3>
   <ol>
     <li>Sign in at <a href="https://onebrain.apxlbz.com">onebrain.apxlbz.com</a>
-      with your work Google account. The first person from a domain sets the
-      organization up; it takes about five minutes.</li>
-    <li>Connect at least one source on the Sources step, so the memory has
-      something to say.</li>
+      with Google. Your personal memory is ready immediately &mdash; there is
+      nothing else to set up.</li>
   </ol>
   <h3>Claude on the web, Claude Desktop, and mobile</h3>
   <ol>
@@ -118,12 +138,137 @@
     VS&nbsp;Code. Scripts and hooks authenticate with a personal token, minted on
     the same page or in Settings, sent as
     <code>Authorization: Bearer &lt;token&gt;</code>.</p>
+  <p><b>Memory.md</b> is the portable half of the product: a short instruction
+    file that teaches <i>any</i> agent when to call <code>recall</code> and
+    <code>remember</code>, even where the MCP server&rsquo;s own instructions
+    are ignored. Download your personalised copy from
+    <code>GET /functions/v1/api/memory.md</code> (Bearer token required) or
+    from Settings, and drop it where your agent reads instructions
+    (<code>CLAUDE.md</code> <code>@import</code>, <code>AGENTS.md</code>,
+    a ChatGPT/Grok custom instruction, a system prompt).</p>
+
+  <h2 id="api">API reference</h2>
+  <p>Everything the MCP tools do is also plain REST, for agents and scripts
+    that don&rsquo;t speak MCP. Base URL:
+    <pre>https://qlpfjeciekaqzribxlnp.supabase.co/functions/v1/api</pre>
+    Every call carries <code>Authorization: Bearer &lt;token&gt;</code> &mdash;
+    a personal token (Settings, or <code>POST /v1/me/token</code> from a
+    signed-in session) or a Supabase session JWT. A shared space is selected
+    with <code>?space=&lt;domain&gt;</code> or an <code>X-OneBrain-Space</code>
+    header; omit both for your personal memory.</p>
+  <h3><code>POST /v1/recall</code></h3>
+  <p>Search the memory.</p>
+  <pre>curl -X POST "$BASE/v1/recall" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"query": "pricing decision", "limit": 5}'</pre>
+  <p class="muted">Body: <code>query</code> (required), <code>limit</code>
+    (default 5), <code>source</code>, <code>type</code>. Returns
+    <code>{ results: [{ id, content, type, source, created_at, score, &hellip; }] }</code>.</p>
+  <h3><code>POST /v1/remember</code></h3>
+  <p>Store a durable fact, preference or decision.</p>
+  <pre>curl -X POST "$BASE/v1/remember" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"content": "The launch moved to October 14."}'</pre>
+  <p class="muted">Body: <code>content</code> (required), <code>replaces</code>
+    (ids this supersedes), <code>type</code>. A quick durability check runs
+    first; trivial or one-off chatter is gated and not stored
+    (<code>{ stored: false, gated: true }</code>). Otherwise returns
+    <code>{ stored: true, facts: [{ id }], enrichment: "pending" }</code>
+    immediately &mdash; the fact is recallable right away; richer extraction
+    finishes in the background.</p>
+  <h3><code>POST /v1/forget</code></h3>
+  <p>Permanently delete memories. Irreversible.</p>
+  <pre>curl -X POST "$BASE/v1/forget" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"ids": ["&lt;fact-id&gt;"]}'</pre>
+  <p class="muted">Body: <code>ids</code> (uuid array) or <code>contains</code>
+    (a text match, &ge; 3 characters). A <code>contains</code> match over the
+    safety threshold is refused unless resent with <code>"confirm": true</code>;
+    pass <code>"dry_run": true</code> to preview first.</p>
+  <h3><code>POST /v1/feedback</code></h3>
+  <p>Rate a recalled fact 1&ndash;5 so ranking learns what was useful:
+    <code>{"fact_ids": ["&lt;id&gt;"], "rating": 5}</code>.</p>
+  <h3><code>GET /v1/export</code></h3>
+  <p>Your whole memory as portable JSON &mdash; raw inputs, derived facts,
+    entities, relationships, summaries. Embeddings are omitted (reproducible,
+    provider-specific); forgotten content is left out.</p>
+  <h3><code>POST /v1/me/token</code></h3>
+  <p>Mint a personal API token (needs a signed-in session, e.g. a web cookie
+    or OAuth JWT, not another static token). Minting again replaces the
+    previous token: <code>{ token, note: "shown once&hellip;" }</code>.</p>
+
+  <h2 id="architecture">Architecture</h2>
+  <p>OneBrain runs entirely on <b>Supabase</b>: Postgres with <code>pgvector</code>
+    for storage, Edge Functions (Deno) for every server surface, and GoTrue for
+    auth (Google sign-in, plus MCP OAuth&nbsp;2.1).</p>
+  <ul>
+    <li><b>Write path (<code>remember</code>).</b> The input is stored verbatim
+      first &mdash; immutable, deduplicated by source reference &mdash; and is
+      recallable within the same request. In the background, an LLM
+      (DeepSeek, the platform engine) splits it into atomic facts with
+      entities and relationships, embeds them (Qwen3, 1024-d), and a judge
+      retires any fact they contradict.</li>
+    <li><b>Read path (<code>recall</code>).</b> A query is embedded and
+      matched against the memory with hybrid semantic (pgvector cosine) and
+      lexical (Postgres full text) search, fused and re-ranked by recency,
+      importance, and feedback learned from ratings.</li>
+    <li><b>Tenancy.</b> Every sign-in gets its own memory (<code>user:&lt;email&gt;</code>),
+      isolated by row-level security keyed off the authenticated caller;
+      domain-shared memories created before this model are kept as opt-in
+      shared spaces.</li>
+    <li><b>Ingestion.</b> There is currently no automatic ingestion from
+      third-party sources (Gmail, Calendar, Trello, &hellip;); every fact comes
+      from an explicit <code>remember</code> call by a connected agent, hook,
+      or the import tool. A background worker (pg_cron, every 30s) only
+      self-heals writes whose enrichment didn&rsquo;t finish.</li>
+    <li><b>Billing.</b> Free / Pro / Team plans are prepaid platform credit;
+      usage is metered per model call.</li>
+  </ul>
+  <p class="muted">Deeper design history, including diagrams, lives in the
+    repository&rsquo;s <code>docs/</code> directory for anyone with access to
+    the codebase.</p>
+
+  <h2 id="faq">FAQ</h2>
+  <h3>Is this a team tool or a personal one?</h3>
+  <p>Personal, by default: every sign-in gets its own private memory, and no
+    setup is required to start using it. Organizations that already share a
+    domain memory keep it as an opt-in shared space.</p>
+  <h3>Does OneBrain read my Gmail, Calendar or Trello automatically?</h3>
+  <p>No. Automatic ingestion from third-party sources is currently off.
+    Memory is built only from what you and your agents explicitly
+    <code>remember</code> &mdash; in conversation, through a hook, or via the
+    import tool.</p>
+  <h3>Can two of my agents see the same memory?</h3>
+  <p>Yes &mdash; that is the point. Connect Claude, ChatGPT, Cursor, or any
+    MCP-capable agent to the same endpoint and sign-in; what one
+    <code>remember</code>s, the others can <code>recall</code>.</p>
+  <h3>Can a coworker read my memory?</h3>
+  <p>No, unless you were already part of a shared domain space before the
+    personal-by-default model. A fresh sign-in is always private, even to
+    coworkers on the same email domain.</p>
+  <h3>How do I remove something?</h3>
+  <p>Ask an agent to forget it, call <code>POST /v1/forget</code>, or use the
+    dashboard. Deletion is permanent and cascades to everything derived from
+    that input.</p>
+  <h3>What does it cost?</h3>
+  <p>Free includes 500 facts and 2 connected agents. Pro and Team add higher
+    limits and per-seat pricing; both run on prepaid platform credit metered
+    per model call. See Settings &rarr; Billing for current numbers.</p>
+  <h3>Can I self-host OneBrain?</h3>
+  <p>Not currently. It runs on a managed Supabase project; there is no
+    self-hosted or on-prem edition.</p>
+  <h3>Is my data used to train models?</h3>
+  <p>No. See <a href="#data">Your data</a> and the full
+    <a href="./privacy.html">Privacy policy</a>.</p>
 
   <h2 id="data">Your data</h2>
   <ul>
-    <li><b>Access is read-only</b> for every connected source; OneBrain cannot
-      modify or delete anything in Gmail, Drive, Calendar, Trello, or a remote
-      source.</li>
+    <li><b>Personal by default.</b> A fresh sign-in creates a private memory
+      only you (and the agents you connect) can read or write.</li>
+    <li><b>No source access unless you grant it.</b> OneBrain does not read
+      Gmail, Drive, Calendar or Trello on its own; any legacy connection from
+      before this model was read-only and could not modify or delete anything
+      at the source.</li>
     <li><b>Google user data</b> is handled under the
       <a href="https://developers.google.com/terms/api-services-user-data-policy"
       rel="noopener" target="_blank">Google API Services User Data Policy</a>,
@@ -133,7 +278,7 @@
       are never written to memory.</li>
     <li><b>You can take it all back.</b> Settings offers a full JSON export, a
       one-click purge of the memory, and deletion of the organization, which
-      revokes each source&rsquo;s access at the provider.</li>
+      revokes any connected source&rsquo;s access at the provider.</li>
     <li>Full details: <a href="./privacy.html">Privacy policy</a> &middot;
       <a href="./terms.html">Terms of service</a>.</li>
   </ul>
@@ -144,11 +289,12 @@
       ends in <code>/functions/v1/mcp</code> with no trailing slash.</li>
     <li><b>The sign-in loops.</b> Sign in at onebrain.apxlbz.com first with the
       same Google account, then connect again.</li>
-    <li><b>Answers are empty.</b> The memory fills within a minute of connecting
-      a source. The dashboard&rsquo;s Sources tab shows each connection&rsquo;s
-      state, when it was last verified, and any trouble.</li>
-    <li><b>A source shows &ldquo;error&rdquo;.</b> Open Setup &rarr; Sources and
-      click that source: OneBrain re-checks what it reads and fixes it.</li>
+    <li><b>Answers are empty.</b> A fresh memory has nothing in it yet: ask an
+      agent to <code>remember</code> something, or run the
+      <a href="#api">import tool</a>, then <code>recall</code> again.</li>
+    <li><b>A legacy source connection shows &ldquo;error&rdquo;.</b> New source
+      connections are not offered under the current model; an existing one
+      can be re-checked from Setup &rarr; Sources.</li>
     <li>Anything else: <a href="mailto:or@apxlbz.com">or@apxlbz.com</a>.</li>
   </ul>
 </main>

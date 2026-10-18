@@ -185,6 +185,7 @@ async function usageSummary() {
     month_tokens: billing.month_tokens,
     month_spend_usd: billing.month_spend_usd,
     plan,
+    free_tier: billing.free_tier,
     events: (ev.data ?? []).length,
     daily: Object.entries(daily).sort().map(([day, cnt]) => ({ day, n: cnt })),
     by_op: [...byOp.values()].sort((a, b) => b.usd - a.usd),

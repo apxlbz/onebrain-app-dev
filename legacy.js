@@ -1194,11 +1194,18 @@ async function viewUsage(root) {
         <td class="tight num">${usd(r.usd, 4)}</td></tr>`).join('')}</tbody></table>`
     : `<p class="dim">No ${name} yet.</p>`;
 
+  const planActive = u.plan && u.plan.status === 'active';
   root.innerHTML = `
     <h1>Billing</h1>
+    ${u.free_tier?.active ? `<p class="lede" style="font-weight:600">
+      ${n(u.free_tier.facts)} of ${n(u.free_tier.max_facts)} facts stored on
+      Free — connect up to ${n(u.free_tier.max_agents)} agents.</p>` : ''}
     <p class="lede">What the platform engine has thought on your behalf — every
       call metered as it happened, priced per token. An org running on its own
       API keys spends there, not here.</p>
+    ${planActive ? `<p class="dim" style="margin:-4px 0 14px">If we raise
+      prices later, you keep today&rsquo;s rate for as long as you stay
+      subscribed.</p>` : ''}
 
     <div class="tiles" style="margin-bottom:14px">
       ${tile(usd(u.balance_usd), 'balance', 'prepaid — rolls over')}

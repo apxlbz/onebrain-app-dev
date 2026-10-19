@@ -29,7 +29,7 @@
   .muted{color:var(--muted)}
   a{color:var(--lake)}
   .lede{color:var(--muted);max-width:56ch}
-  .plans{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:36px 0}
+  .plans{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin:36px 0}
   .plan{border:1px solid var(--line);border-radius:12px;padding:20px;background:#fff}
   .plan h2{font:600 15px/1.3 var(--sans);margin:0 0 4px;text-transform:uppercase;letter-spacing:.04em}
   .plan .price{font:400 30px/1.1 var(--serif);margin:10px 0 6px}
@@ -38,7 +38,13 @@
   .plan .cta{display:inline-block;padding:9px 16px;border-radius:8px;background:var(--lake);
     color:#fff;text-decoration:none;font-size:14px}
   .plan.alt .cta{background:var(--ink)}
+  .unit{border:1px solid var(--line);border-radius:12px;padding:20px 24px;background:var(--sunk);
+    max-width:860px}
+  .unit h2{font:600 14px/1.3 var(--sans);margin:0 0 10px;text-transform:uppercase;letter-spacing:.04em}
+  .unit ul{margin:0;padding-left:20px;font-size:14.5px}
+  .unit li{margin:4px 0}
   .note{font-size:13px;color:var(--muted);margin-top:28px;max-width:60ch}
+  @media (max-width:960px){.plans{grid-template-columns:repeat(2,1fr)}}
   @media (max-width:720px){.plans{grid-template-columns:1fr}}
 </style>
 </head>
@@ -50,6 +56,23 @@
     Free holds 500 facts and 2 agents; Pro and Team lift those limits with no
     change to how OneBrain works &mdash; the same recall, the same provenance,
     the same data controls.</p>
+
+  <div class="unit">
+    <h2>What you&rsquo;re billed on</h2>
+    <p>No credits, no token math, nothing to meter. Two things decide your
+      plan:</p>
+    <ul>
+      <li><strong>Memories.</strong> Every fact OneBrain remembers for you
+        counts once. Free keeps up to 500; Pro and Team are unlimited.</li>
+      <li><strong>Agents.</strong> Each tool or harness that calls the API
+        &mdash; Claude, Cursor, ChatGPT, a script &mdash; is one connected
+        agent. Free allows 2; Pro and Team are unlimited.</li>
+    </ul>
+    <p>Calling <code>recall</code> and <code>remember</code> is unlimited and
+      already included on every plan &mdash; API calls themselves are never
+      metered or billed, so you can predict your bill before you write a
+      single line of integration code.</p>
+  </div>
 
   <div class="plans">
     <div class="plan">
@@ -67,8 +90,17 @@
     <div class="plan alt">
       <h2>Team</h2>
       <p class="price">$15<span>&nbsp;/seat/month</span></p>
-      <p class="limits">Unlimited facts &middot; unlimited agents &middot; per seat</p>
+      <p class="limits">Unlimited facts &middot; unlimited agents &middot; per seat
+        &middot; shared namespaces &mdash; a multiplayer memory your whole
+        team reads from and writes to</p>
       <a class="cta" href="./app.html" data-signin>Sign in with Google</a>
+    </div>
+    <div class="plan alt">
+      <h2>Enterprise</h2>
+      <p class="price">Contact us</p>
+      <p class="limits">Everything in Team &middot; SSO &middot; an SLA
+        &middot; a dedicated contact for procurement and security review</p>
+      <a class="cta" href="mailto:or@apxlbz.com">Contact us</a>
     </div>
   </div>
 

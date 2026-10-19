@@ -39,8 +39,10 @@
     <a href="#quickstart">Quickstart</a><a href="#what">What it is</a>
     <a href="#connect">Connect to Claude</a><a href="#tools">Tools</a>
     <a href="#other">Other assistants</a><a href="#api">API reference</a>
-    <a href="#architecture">Architecture</a><a href="#faq">FAQ</a>
-    <a href="#data">Your data</a><a href="#trouble">Troubleshooting</a>
+    <a href="#architecture">Architecture</a><a href="#concepts">Concepts</a>
+    <a href="#security">Security</a><a href="#faq">FAQ</a>
+    <a href="#data">Your data</a><a href="#errors">Error reference</a>
+    <a href="#trouble">Troubleshooting</a>
   </nav>
 
   <h2 id="quickstart">Quickstart</h2>
@@ -236,6 +238,114 @@
     repository&rsquo;s <code>docs/</code> directory for anyone with access to
     the codebase.</p>
 
+  <h2 id="concepts">Concepts</h2>
+  <h3>Namespaces: personal memory vs. shared spaces</h3>
+  <p>Every credential resolves to exactly one <b>namespace</b> (internally an
+    <code>org</code>) &mdash; the row-level-security boundary every read and
+    write is scoped to. There are two kinds:</p>
+  <ul>
+    <li><b>Personal (default).</b> Every sign-in&rsquo;s own namespace,
+      <code>user:&lt;email&gt;</code>, created on first sign-in. Only that
+      person&rsquo;s own credentials, or agents they connect with a personal
+      token, can ever read or write it &mdash; not even a coworker on the same
+      email domain.</li>
+    <li><b>Shared space.</b> A namespace several members belong to, selected
+      with <code>?space=&lt;name&gt;</code> on the connector URL or an
+      <code>X-OneBrain-Space</code> header. Only an existing <code>members</code>
+      row grants entry: asking for a space you don&rsquo;t belong to fails
+      closed (the credential is rejected outright, never silently downgraded
+      to your personal memory). Domain-wide namespaces created before
+      personal-by-default became the model are kept this way; there is
+      currently no self-serve way to create a new shared space.</li>
+  </ul>
+  <p>A credential carries no namespace of its own: a personal token always
+    resolves to its minter&rsquo;s personal namespace, and a session token
+    resolves to personal unless it asks for a space it belongs to. Many agents
+    (Claude, ChatGPT, Cursor, &hellip;) can read and write the same namespace at
+    once &mdash; that is the whole point &mdash; but one connection only ever
+    reaches one namespace at a time.</p>
+  <h3>Facts, not transcripts</h3>
+  <p>OneBrain does not store conversations. A <code>remember</code> call stores
+    the raw input verbatim first (deduplicated by source reference, immutable
+    and recallable immediately), then an LLM derives it into one or more
+    atomic <b>facts</b>, each carrying a <code>type</code>, the entities and
+    relationships it mentions, and the agent and time that produced it.
+    <code>recall</code> searches facts, never the original input text.</p>
+  <h3>Supersession, not overwrite</h3>
+  <p>Facts are never edited in place. Passing <code>replaces</code> (ids from a
+    prior <code>recall</code>) on a new <code>remember</code> retires the facts
+    it names and links the new fact in their place; a background judge also
+    retires any fact a new one directly contradicts. A retired fact still
+    exists, marked not current, so provenance is never lost &mdash; only
+    <code>forget</code> actually deletes anything.</p>
+  <h3>Agent attribution</h3>
+  <p>Every fact keeps which agent wrote it (Claude, ChatGPT, Cursor, a script
+    using a personal token, &hellip;) and when, derived server-side from the
+    credential &mdash; never from anything the request body claims. The
+    dashboard&rsquo;s per-fact badge and <code>list_memory</code>&rsquo;s counts
+    both come from this.</p>
+
+  <h2 id="security">Security</h2>
+  <h3>Credentials</h3>
+  <p>Two kinds of bearer credential, both sent as
+    <code>Authorization: Bearer &lt;token&gt;</code>:</p>
+  <ul>
+    <li><b>Personal API token</b> (<code>ob_&hellip;</code>), minted at
+      <code>POST /v1/me/token</code> or from Settings. Stored as a SHA-256
+      hash only &mdash; OneBrain cannot show it to you again after the first
+      time. Minting again immediately revokes the previous one (one live
+      token per person). It always resolves to <b>member</b> role, even for
+      the organization&rsquo;s owner: there is deliberately no way to mint an
+      owner-scoped token, so a leaked hook token can never replace keys,
+      change billing, or delete the organization.</li>
+    <li><b>Session token</b> &mdash; a Supabase-issued JWT from Google sign-in
+      or MCP OAuth, verified against GoTrue on every request (never decoded
+      locally). Carries <b>owner</b> role only when your <code>members</code>
+      row says so; an unconfirmed or anonymous sign-in is rejected outright,
+      since email is the tenancy key.</li>
+  </ul>
+  <h3>OAuth (MCP)</h3>
+  <p>Claude, Cursor, VS&nbsp;Code and other MCP clients authenticate with
+    OAuth&nbsp;2.1: dynamic client registration, PKCE, and a GoTrue-issued
+    access token scoped to the connecting person. OneBrain advertises itself
+    as a protected resource (<code>/.well-known/oauth-protected-resource</code>,
+    RFC&nbsp;9728) so a compliant client discovers the authorization server on
+    its own. The agent behind an OAuth session is derived from the token&rsquo;s
+    registered client, never from anything the request claims to be.</p>
+  <p>Connecting a third-party source (where still offered) likewise uses OAuth
+    at the provider, and requests only read scopes (<code>gmail.readonly</code>,
+    <code>drive.readonly</code>, <code>calendar.readonly</code>, Trello&rsquo;s
+    <code>read</code>) &mdash; OneBrain only reads from sources, never writes
+    or deletes anything at the provider.</p>
+  <h3>Saving data</h3>
+  <ul>
+    <li>Secrets are stripped on the way in: API keys, passwords and tokens are
+      never written to memory.</li>
+    <li>A quick durability check runs before anything is stored; trivial or
+      one-off chatter is gated and reported back
+      (<code>{ stored: false, gated: true }</code>), not silently kept.</li>
+    <li>Personal tokens are stored hashed; raw inputs, facts and embeddings
+      are isolated per namespace by Postgres row-level security keyed off the
+      authenticated caller, not by application-level filtering alone.</li>
+  </ul>
+  <h3>Deleting data</h3>
+  <ul>
+    <li><code>forget</code> (the MCP tool, or <code>POST /v1/forget</code>) is
+      a real, irreversible delete &mdash; the fact, its embedding, and
+      anything derived from it, not a hidden flag. Delete by <code>ids</code>,
+      or by <code>contains</code> (a text match); a <code>contains</code>
+      match over a safety threshold is refused unless resent with
+      <code>"confirm": true</code>, and <code>"dry_run": true</code> previews
+      a match without deleting anything.</li>
+    <li>A full purge (every input, fact, entity, relationship and summary in
+      the namespace) and organization deletion are owner-only, gated behind
+      re-typing the organization&rsquo;s exact name, and revoke any connected
+      source&rsquo;s grant at the provider too &mdash; not just locally.</li>
+    <li><code>GET /v1/export</code> gives back everything as JSON for your own
+      records before deleting anything; embeddings are omitted (reproducible,
+      provider-specific) and forgotten content is left out.</li>
+  </ul>
+
   <h2 id="faq">FAQ</h2>
   <h3>Is this a team tool or a personal one?</h3>
   <p>Personal, by default: every sign-in gets its own private memory, and no
@@ -290,6 +400,85 @@
     <li>Full details: <a href="./privacy.html">Privacy policy</a> &middot;
       <a href="./terms.html">Terms of service</a>.</li>
   </ul>
+
+  <h2 id="errors">Error reference</h2>
+  <p>Every error is JSON, <code>{ "error": "&lt;message&gt;" }</code> (an MCP
+    tool failure carries the same message inside the JSON-RPC result&rsquo;s
+    <code>isError</code> content, with the equivalent HTTP status alongside
+    it). The message itself usually says what to do; this is the same list
+    for a quick lookup by status code.</p>
+  <table>
+    <tr><th>Status</th><th>Message (or its start)</th><th>Fix</th></tr>
+    <tr><td>400</td><td><code>query</code> / <code>content</code> /
+      <code>ids</code> missing or empty</td>
+      <td>Check the request body against the <a href="#api">API reference</a>
+        &mdash; the usual cause is a missing required field.</td></tr>
+    <tr><td>400</td><td><code>type the organization&rsquo;s name exactly
+      &mdash; &hellip; &mdash; to confirm</code></td>
+      <td>Purge/reset need the organization&rsquo;s exact display name (or
+        email, for a personal namespace) retyped as confirmation &mdash; copy
+        it verbatim.</td></tr>
+    <tr><td>401</td><td><code>Send Authorization: Bearer &lt;token&gt;
+      &hellip;</code></td>
+      <td>Attach a valid bearer token: a personal token (Settings, or
+        <code>POST /v1/me/token</code>) or a Supabase session token.</td></tr>
+    <tr><td>401</td><td><code>authorization required</code> (MCP)</td>
+      <td>Your MCP client needs to complete OAuth discovery and sign-in; most
+        clients do this automatically from the response&rsquo;s
+        <code>WWW-Authenticate</code> header.</td></tr>
+    <tr><td>402</td><td><code>out of platform credits &hellip;</code></td>
+      <td>Choose a plan or top up credit in Settings &rarr; Billing.</td></tr>
+    <tr><td>402</td><td><code>free-tier fact limit reached &hellip;</code></td>
+      <td>Upgrade your plan, or <code>forget</code> facts you no longer
+        need.</td></tr>
+    <tr><td>402</td><td><code>free-tier agent limit reached &hellip;</code></td>
+      <td>Upgrade your plan, or re-mint an existing agent&rsquo;s token
+        instead of connecting a new one.</td></tr>
+    <tr><td>403</td><td><code>this needs an organization owner &hellip;</code></td>
+      <td>Ask an owner of your organization to do it, or sign in as the
+        owner.</td></tr>
+    <tr><td>404</td><td><code>no route for &lt;method&gt; &lt;path&gt;</code></td>
+      <td>Check the method and path against the
+        <a href="#api">API reference</a> &mdash; a common cause is a trailing
+        slash or the wrong verb.</td></tr>
+    <tr><td>404</td><td><code>no such organization</code> /
+      <code>no such connection</code></td>
+      <td>The id in the request doesn&rsquo;t exist in your namespace;
+        re-check it came from a recent <code>recall</code> or listing.</td></tr>
+    <tr><td>409</td><td><code>contains matches N inputs &hellip; nothing
+      deleted</code></td>
+      <td>Re-send the same <code>forget</code> call with
+        <code>"confirm": true</code>, or first <code>"dry_run": true</code> to
+        see what would be deleted.</td></tr>
+    <tr><td>413</td><td><code>&hellip; input is too large for one model call
+      &hellip;</code></td>
+      <td>Send less text at once &mdash; split the <code>remember</code>
+        call.</td></tr>
+    <tr><td>429</td><td><code>write rate limit reached &hellip;</code></td>
+      <td>Slow down: wait out the stated window (per minute/day, per
+        organization) before retrying.</td></tr>
+    <tr><td>429</td><td><code>&hellip; embedding backend busy &hellip;</code> /
+      <code>platform engine busy &hellip;</code></td>
+      <td>A transient upstream overload &mdash; retry after a few seconds;
+        repeated 429s mean the provider is degraded, not your request.</td></tr>
+    <tr><td>503</td><td><code>OneBrain is briefly unavailable &mdash; retry
+      shortly</code></td>
+      <td>A database hiccup, not an error in your request. Retry after the
+        <code>Retry-After</code> header&rsquo;s delay.</td></tr>
+    <tr><td>503</td><td><code>no Anthropic API key</code> / <code>no Voyage
+      API key</code></td>
+      <td>Your organization set its own LLM keys but is missing one of them;
+        add the missing key in Settings, or remove the partial set to fall
+        back to OneBrain&rsquo;s platform engine.</td></tr>
+    <tr><td>503</td><td><code>could not verify your role right now
+      &hellip;</code></td>
+      <td>A transient failure while checking owner access specifically
+        &mdash; retry; this is not a permissions denial.</td></tr>
+    <tr><td>500</td><td>anything else</td>
+      <td>An unexpected server error. Retry once; if it persists, email
+        <a href="mailto:or@apxlbz.com">or@apxlbz.com</a> with the message and
+        roughly when it happened.</td></tr>
+  </table>
 
   <h2 id="trouble">Troubleshooting</h2>
   <ul>

@@ -57,7 +57,9 @@
       <pre>claude mcp add --transport http onebrain https://qlpfjeciekaqzribxlnp.supabase.co/functions/v1/mcp</pre>
       run <code>/mcp</code>, choose <b>onebrain</b>, and approve the Google
       sign-in. See <a href="#connect">Connect OneBrain to Claude</a> for every
-      client, and <a href="#other">Other assistants</a> for everything else.</li>
+      client, <a href="#other">Other assistants</a> for everything else, or
+      <a href="./install.html">the install page</a> for one-click links and
+      ready-to-paste config for every client at once.</li>
     <li>Tell one agent something (&ldquo;remember that launch moved to
       October 14&rdquo;), then ask a <i>different</i> agent about it. Same
       memory, every agent.</li>
@@ -142,11 +144,13 @@
   </ul>
 
   <h2 id="other">Other assistants</h2>
-  <p>Any MCP client that speaks streamable HTTP takes the same address. Cursor,
-    VS&nbsp;Code, Windsurf, and Gemini CLI setups are filled in for you on the
-    setup wizard&rsquo;s Done step, including one-click links for Cursor and
-    VS&nbsp;Code. Scripts and hooks authenticate with a personal token, minted on
-    the same page or in Settings, sent as
+  <p>Any MCP client that speaks streamable HTTP takes the same address.
+    <a href="./install.html">The install page</a> has one-click links and
+    ready-to-paste config for Cursor, VS&nbsp;Code, Windsurf, Codex, Zed,
+    Gemini CLI and anything else &mdash; no sign-in and no secret required,
+    since OAuth handles the connection the first time each client connects.
+    Scripts and hooks that can&rsquo;t do OAuth authenticate with a personal
+    token, minted on Settings, sent as
     <code>Authorization: Bearer &lt;token&gt;</code>.</p>
   <p>Calling the REST endpoints directly from a script or hook? See the
     <a href="./api-reference.html">API reference</a> &mdash; generated live from

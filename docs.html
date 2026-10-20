@@ -197,7 +197,12 @@
     <tr><td><code>type</code></td><td>string</td><td>No</td>
       <td>Restrict to one fact type: <code>task</code>, <code>decision</code>,
         <code>meeting</code>, <code>message</code>, <code>doc</code>,
-        <code>fact</code>, <code>preference</code>, <code>person</code>.</td></tr>
+        <code>fact</code>, <code>preference</code>, <code>person</code>,
+        <code>handoff</code>.</td></tr>
+    <tr><td><code>task_id</code></td><td>string</td><td>No</td>
+      <td>Restrict to facts (and handoffs) written with this exact
+        <code>task_id</code> &mdash; &ldquo;what did I/a predecessor learn
+        on task T&rdquo;.</td></tr>
   </table>
   <p>Request:</p>
   <pre>curl -X POST "$BASE/v1/recall" \
@@ -264,6 +269,12 @@
       <td>Fact ids from a prior <code>recall</code> that this call
         supersedes (at most 50; anything not a valid uuid is dropped
         silently rather than failing the write).</td></tr>
+    <tr><td><code>task_id</code></td><td>string</td><td>No</td>
+      <td>Tag this fact so a successor can filter it back out with
+        <code>/v1/recall</code>&rsquo;s or <code>/v1/briefing</code>&rsquo;s
+        <code>task_id</code>.</td></tr>
+    <tr><td><code>session_id</code></td><td>string</td><td>No</td>
+      <td>Optional, finer-grained than <code>task_id</code>.</td></tr>
   </table>
   <p>Request:</p>
   <pre>curl -X POST "$BASE/v1/remember" \
@@ -296,6 +307,50 @@
     or one-off chatter (&ldquo;ok thanks&rdquo;) is gated and reported, not
     stored &mdash; <code>{ "stored": false, "gated": true, "knowledge_items": 0 }</code>,
     with nothing written and no credit spent.</p>
+
+  <h3><code>POST /v1/handoff</code></h3>
+  <p>Record a handoff for a task: one whole note &mdash; unlike
+    <code>/v1/remember</code>, never split into separate facts &mdash; so a
+    successor agent recovers your summary, open questions and next steps
+    intact.</p>
+  <table>
+    <tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr>
+    <tr><td><code>task_id</code></td><td>string</td><td>Yes</td>
+      <td>The task this handoff is for. Also tag ordinary
+        <code>/v1/remember</code> writes with the same <code>task_id</code>
+        so <code>/v1/recall</code> can filter to everything learned on that
+        task.</td></tr>
+    <tr><td><code>summary</code></td><td>string</td><td>Yes</td>
+      <td>What happened and what you learned. Refused (<code>400</code>),
+        not truncated, past 8,000 characters &mdash; split a longer handoff
+        into several calls instead.</td></tr>
+    <tr><td><code>session_id</code></td><td>string</td><td>No</td>
+      <td>Optional, finer-grained than <code>task_id</code>.</td></tr>
+    <tr><td><code>open_questions</code></td><td>string[]</td><td>No</td>
+      <td>Unresolved questions for the successor. Refused (<code>400</code>),
+        not truncated, past 20 items or 500 characters per item.</td></tr>
+    <tr><td><code>next_steps</code></td><td>string[]</td><td>No</td>
+      <td>What to do next. Same 20-item / 500-character-per-item limit as
+        <code>open_questions</code>, refused rather than truncated.</td></tr>
+  </table>
+  <p>Request:</p>
+  <pre>curl -X POST "$BASE/v1/handoff" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{
+    "task_id": "gap-005",
+    "summary": "Shipped the handoff primitive: task_id/session_id on remember, recall(task_id=...), and a handoff write.",
+    "next_steps": ["Backfill task_id onto older facts if useful"]
+  }'</pre>
+  <p>Response:</p>
+  <pre>{
+  "stored": true,
+  "task_id": "gap-005",
+  "fact": { "id": "4b6e6f0e-2c0a-4b2a-9e1f-6c9b7a2d5e10", "content": "&hellip;", "type": "handoff" },
+  "agent": { "id": null, "name": "Unknown agent", "kind": "unknown", "label": "Unknown agent", "known": false }
+}</pre>
+  <p class="muted">Call <code>GET /v1/briefing?task_id=gap-005</code> (or the
+    MCP <code>briefing</code> tool) to get the latest handoff for a task back
+    out, alongside its decisions, open tasks and recent changes.</p>
 
   <h3><code>POST /v1/feedback</code></h3>
   <p>Rate a recalled fact so ranking learns what was useful. Folds into the

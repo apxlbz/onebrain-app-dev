@@ -203,8 +203,9 @@
   <pre>curl -X POST "$BASE/v1/recall" \
   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"query": "when is the launch now", "type": "decision", "limit": 5}'</pre>
-  <p>Response &mdash; one matching fact, ranked by hybrid semantic + lexical
-    score. <code>content</code> is not the raw text: it is fenced in a
+  <p>Response &mdash; one matching fact, ranked by hybrid semantic + lexical +
+    graph fusion, optionally reranked. <code>content</code> is not the raw
+    text: it is fenced in a
     <code>&lt;memory_item&gt;</code> tag carrying provenance in its
     attributes, under the <code>notice</code> every response repeats, so a
     caller that feeds this straight into a prompt cannot mistake a recalled

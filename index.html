@@ -355,10 +355,10 @@
   <div class="wrap narrow center">
     <p class="eyebrow">Wire it up</p>
     <h2 data-words id="agents-h">One line, wherever you work.</h2>
-    <p class="lede">An agent with tools and no memory will confidently tell you
-      something your team decided against in March. Point it here and it checks
-      first &mdash; same URL and token in your terminal, your editor, or a job
-      running at 3am.</p>
+    <p class="lede">Mint one token, then one line. An agent with tools and no
+      memory will confidently tell you something your team decided against in
+      March. Point it here and it checks first &mdash; the terminal, the editor,
+      or a job running at 3am.</p>
 
     <div class="term">
       <div class="termbar" role="tablist" aria-label="Setup target">
@@ -373,37 +373,27 @@
       </div>
 
       <div class="termpane" id="p-cc" role="tabpanel" aria-labelledby="t-cc"
-        data-copy="claude mcp add --scope user --transport http onebrain __MCP_URL__">
-<pre class="snippet" tabindex="0"><code translate="no"><span class="prompt">$</span> claude mcp add --scope user --transport http onebrain \
-    <span data-mcp-url>__MCP_URL__</span></code></pre>
-        <p class="termnote">For everyone on the team who works in the terminal.
-          Sign in with Google on the first call; hooks make memory automatic
-          &mdash; nobody has to remember to say &ldquo;remember this&rdquo;.</p>
+        data-copy='curl -fsSL __INSTALL_SH__ | ONEBRAIN_API_KEY="$ONEBRAIN_API_KEY" bash -s -- claude-code'>
+<pre class="snippet" tabindex="0"><code translate="no"><span class="prompt">$</span> curl -fsSL <span data-install-sh>__INSTALL_SH__</span> | ONEBRAIN_API_KEY="$ONEBRAIN_API_KEY" bash -s -- claude-code</code></pre>
+        <p class="termnote">Mint the token in Settings &rarr; Connect your tools
+          and export it as <span class="mono" translate="no">ONEBRAIN_API_KEY</span>.
+          Production is <span class="mono" translate="no">https://onebrain.apxlbz.com/agent-install.sh</span>.
+          Dev is the same command from
+          <span class="mono" translate="no">https://onebrain-dev.apxlbz.com/agent-install.sh</span>.</p>
       </div>
 
       <div class="termpane" id="p-cursor" role="tabpanel" aria-labelledby="t-cursor" hidden
-        data-copy='{ "mcpServers": { "onebrain": { "type": "http", "url": "__MCP_URL__" } } }'>
-<pre class="snippet" tabindex="0"><code translate="no">{
-  "mcpServers": {
-    "onebrain": {
-      "type": "http",
-      "url": "<span data-mcp-url>__MCP_URL__</span>"
-    }
-  }
-}</code></pre>
-        <p class="termnote">Any MCP client takes the same URL and signs in the
-          same way. Nothing about OneBrain is specific to one harness.</p>
+        data-copy='curl -fsSL __INSTALL_SH__ | ONEBRAIN_API_KEY="$ONEBRAIN_API_KEY" bash -s -- cursor'>
+<pre class="snippet" tabindex="0"><code translate="no"><span class="prompt">$</span> curl -fsSL <span data-install-sh>__INSTALL_SH__</span> | ONEBRAIN_API_KEY="$ONEBRAIN_API_KEY" bash -s -- cursor</code></pre>
+        <p class="termnote">Same script. <span class="mono" translate="no">codex</span>
+          and <span class="mono" translate="no">mcp</span> are the other hosts.</p>
       </div>
 
       <div class="termpane" id="p-rest" role="tabpanel" aria-labelledby="t-rest" hidden
-        data-copy="curl -s __API_URL__/v1/recall -H &quot;Authorization: Bearer $ONEBRAIN_TOKEN&quot; -H 'Content-Type: application/json' -d '{&quot;query&quot;:&quot;why did we not adopt cognee&quot;}'">
-<pre class="snippet" tabindex="0"><code translate="no"><span class="prompt">$</span> curl -s <span data-api-url>__API_URL__</span>/v1/recall \
-    -H "Authorization: Bearer $ONEBRAIN_TOKEN" \
-    -H 'Content-Type: application/json' \
-    -d '{"query":"why did we not adopt cognee"}'</code></pre>
+        data-copy='curl -fsSL __INSTALL_SH__ | ONEBRAIN_API_KEY="$ONEBRAIN_API_KEY" bash -s -- rest'>
+<pre class="snippet" tabindex="0"><code translate="no"><span class="prompt">$</span> curl -fsSL <span data-install-sh>__INSTALL_SH__</span> | ONEBRAIN_API_KEY="$ONEBRAIN_API_KEY" bash -s -- rest</code></pre>
         <p class="termnote">For agents that never touch a laptop &mdash; CI jobs,
-          cron, a service in your cluster. Plain REST with a personal token from
-          Settings, so a shell hook is one <span class="mono" translate="no">curl</span>.</p>
+          cron, a service in your cluster. The key stays in the environment.</p>
       </div>
     </div>
   </div>
@@ -433,6 +423,6 @@
 </footer>
 
 <script src="./home.js?v=1"></script>
-<script type="module" src="./home-auth.js?v=1"></script>
+<script type="module" src="./home-auth.js?v=2"></script>
 </body>
 </html>

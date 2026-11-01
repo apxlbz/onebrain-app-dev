@@ -143,23 +143,21 @@ function activate(el, fn) {
 
 async function viewOverview(root) {
   root.innerHTML = '<div class="spin">Loading…</div>';
-  const [s, ob, conns, mem, members] = await Promise.all([
+  const [s, conns, mem, members] = await Promise.all([
     api('/v1/stats'),
-    // Never let the setup prompt take the whole page down with it.
-    api('/v1/onboarding').catch(() => null),
     api('/v1/connections').catch(() => ({ connections: [] })),
     api('/v1/memories?limit=6').catch(() => ({ items: [] })),
     api('/v1/members').catch(() => ({ members: [] })),
   ]);
 
-  /* An org whose setup is unfinished has a Home full of zeroes and no way to
-   * know why. Say it once, at the top, with the way out. */
-  const setupPrompt = (ob && !ob.completed_at) ? `
+  /* An empty memory has a Home full of zeroes. The way forward is mint + copy,
+   * not the Google-sources wizard. Once anything is stored, the card leaves. */
+  const connectPrompt = !(Number(s.facts_current) > 0) ? `
     <section class="card setupcard" style="margin-bottom:14px" aria-labelledby="h-setup">
-      <h2 class="sec" id="h-setup">Finish setting up ${esc(ob.org || 'your organization')}</h2>
-      <p style="margin:0 0 12px">Connect your sources and verify every key and
-        connection with a live call. Until then this page mostly shows zeroes.</p>
-      <a class="btnlink primary" href="./onboard.html">Open setup</a>
+      <h2 class="sec" id="h-setup">Connect an agent</h2>
+      <p style="margin:0 0 12px">Mint a token and copy one install line. That is
+        the whole setup.</p>
+      <a class="btnlink primary" href="#settings">Mint and copy</a>
     </section>` : '';
 
   const week = (s.daily || []).slice(-7).reduce((a, d) => a + (d.n || 0), 0);
@@ -176,7 +174,7 @@ async function viewOverview(root) {
     <p class="lede">${n(s.facts_current)} current facts from ${n(s.raw)} inputs${
       s.last_ingest ? ` · last ingest ${ago(s.last_ingest)}` : ''}</p>
 
-    ${setupPrompt}
+    ${connectPrompt}
 
     <div class="tiles" style="margin-bottom:14px">
       ${tile(n(s.facts_current), 'current facts',
@@ -200,7 +198,7 @@ async function viewOverview(root) {
                 <td class="tight"><span class="pill">${esc(f.type || 'fact')}</span></td>
                 <td class="tight">${ago(f.created_at)}</td>
               </tr>`).join('')}</tbody></table>`
-          : '<p class="dim">Nothing yet — connect a source, or write through the MCP tools.</p>'}
+          : '<p class="dim">Nothing yet — mint a token in Settings and install a host, or call remember().</p>'}
       </section>
       <section class="card" aria-labelledby="h-src">
         <h2 class="sec" id="h-src">Where memory comes from</h2>
@@ -300,7 +298,7 @@ async function viewMemories(root, params) {
       list.innerHTML = `<div class="empty"><b>No memories match</b>${
         MEM.q || MEM.source || MEM.type
           ? 'Try clearing the filters above.'
-          : 'Connect a source or call remember() to start building memory.'}</div>`;
+          : 'Install an agent from Settings, or call remember(), to start building memory.'}</div>`;
       announce('No memories match.');
       return;
     }
@@ -872,10 +870,10 @@ async function viewSources(root) {
                  sweepLine(c)}</td>
              <td class="num">${n(counts[c.provider] || 0)}</td>
            </tr>`).join('')}</tbody></table>`
-        : `<div class="empty"><b>Nothing is connected</b>Connect Gmail, Google Meet,
-             Calendar or Trello and ingestion starts within a minute.</div>`}
-      <p style="margin:12px 0 0"><a class="ghost" href="./onboard.html">Connect or
-        repair a source</a></p>
+        : `<div class="empty"><b>Nothing is connected</b>Google sources are optional.
+             Agents write memory through the install line in Settings.</div>`}
+      <p style="margin:12px 0 0"><a class="ghost" href="./onboard.html">Google sources
+        (optional)</a></p>
     </section>
 
     ${others.length ? `
@@ -917,7 +915,6 @@ async function viewSettings(root) {
         <span class="k">Entities</span><span class="v num">${n(org.entities)}</span>
         <span class="k">API tokens</span><span class="v num">${n(org.tokens)}</span>
       </div>
-      <p style="margin:12px 0 0"><a class="btnlink" href="./onboard.html">Re-run setup</a></p>
       <p class="dim" style="margin:12px 0 0">Membership is by email domain.
         Everyone signing in from your domain shares this memory; nobody outside
         it can reach a single row.</p>
@@ -926,27 +923,29 @@ async function viewSettings(root) {
 
     <section class="card" style="margin-bottom:14px" aria-labelledby="h-connect">
       <h2 class="sec" id="h-connect">Connect your tools</h2>
-      <p class="dim" style="margin:-4px 0 14px">Two ways in: AI assistants speak
-        MCP; hooks and scripts authenticate with a personal token.</p>
+      <p class="dim" style="margin:-4px 0 14px">Mint one personal token, then copy
+        one line per host. Re-running rewrites only the onebrain entry. The key
+        stays in the environment that launches the host.</p>
 
-      <div class="it" style="font-weight:600">Claude and other MCP clients</div>
-      <div class="id2" style="margin:2px 0 8px">Run this once, then sign in with
-        Google on first use — recall and remember work mid-conversation from
-        then on.</div>
-      <pre class="raw mono" id="mcpsnip" tabindex="0"
-        style="white-space:pre-wrap;word-break:break-all"></pre>
-      <p style="margin:6px 0 20px">
-        <button class="btnlink" id="mcpcopy">Copy command</button></p>
-
-      <div class="it" style="font-weight:600">Personal token — hooks &amp; API</div>
-      <div class="id2" style="margin:2px 0 8px">Authenticates the capture hook and
-        the REST API as you. The token is shown once; minting again replaces the
-        previous one everywhere it's used.</div>
-      <p style="margin:0"><button class="btnlink" id="mintgo">Mint my token</button></p>
+      <p style="margin:0"><button class="btnlink primary" id="mintgo" type="button">Mint my token</button></p>
       <pre class="raw mono" id="mintout" tabindex="0"
         style="margin-top:10px;display:none;white-space:pre-wrap;word-break:break-all"></pre>
       <p style="margin:6px 0 0;display:none" id="mintcopyrow">
-        <button class="btnlink" id="mintcopy">Copy token</button></p>
+        <button class="btnlink" id="mintcopy" type="button">Copy token</button></p>
+
+      <div class="it" style="font-weight:600;margin-top:18px">Install lines</div>
+      <p class="dim" style="margin:2px 0 8px">Export the token as
+        <span class="mono" translate="no">ONEBRAIN_API_KEY</span>, then copy the
+        line for the host you are installing.</p>
+      <div id="installlines"></div>
+      <p class="dim" id="installnote" style="margin:12px 0 0"></p>
+
+      <details id="connect-advanced" style="margin-top:16px">
+        <summary>Advanced — Google sources</summary>
+        <p class="dim" style="margin:8px 0">Optional. Gmail, Meet, Calendar, and
+          Trello. Agents never go through this.</p>
+        <p style="margin:0"><a class="ghost" href="./onboard.html">Connect Google sources</a></p>
+      </details>
     </section>
 
 
@@ -1002,7 +1001,7 @@ async function viewSettings(root) {
             where one allows it, so the access you granted is genuinely
             withdrawn rather than just forgotten here. Anything that could not be
             revoked is listed for you to finish by hand. You are signed out;
-            signing in again creates it empty and starts setup from the top.</div>
+            signing in again creates it empty.</div>
         </div>
       </div>
       <div class="row" style="margin-top:14px">
@@ -1057,17 +1056,44 @@ async function viewSettings(root) {
     } finally { btn.disabled = false; }
   });
 
-  // Connect your tools: the MCP add command is plain text (public URL), the
-  // personal token is fetched on demand and shown exactly once.
-  const mcpCmd = `claude mcp add --transport http onebrain ${FN}/mcp`;
-  $('mcpsnip').textContent = mcpCmd;
-  $('mcpcopy').addEventListener('click', async () => {
-    try {
-      await navigator.clipboard.writeText(mcpCmd);
-      $('mcpcopy').textContent = 'Copied';
-      setTimeout(() => { $('mcpcopy').textContent = 'Copy command'; }, 1800);
-    } catch { announce('Copy failed — select the command text instead.'); }
+  // Connect your tools: mint once, then copy one line of the live
+  // agent-install.sh. Prod host uses the prod script; every other host uses
+  // the dev script, so a token minted here matches the project it is written
+  // against. The secret is not placed in the command — shell history would
+  // keep it — the line reads ONEBRAIN_API_KEY from the environment.
+  const INSTALL_HOSTS = [
+    ['claude-code', 'Claude Code'],
+    ['cursor', 'Cursor'],
+    ['codex', 'Codex'],
+    ['mcp', 'Any MCP client'],
+    ['rest', 'Plain REST'],
+  ];
+  const installScript = location.hostname === 'onebrain.apxlbz.com'
+    ? 'https://onebrain.apxlbz.com/agent-install.sh'
+    : 'https://onebrain-dev.apxlbz.com/agent-install.sh';
+  const installLine = (host) =>
+    `curl -fsSL ${installScript} | ONEBRAIN_API_KEY="$ONEBRAIN_API_KEY" bash -s -- ${host}`;
+  $('installlines').innerHTML = INSTALL_HOSTS.map(([host, label], i) => `
+    <div class="it" style="margin-top:12px">${esc(label)}</div>
+    <pre class="raw mono" id="inst-${i}" tabindex="0"
+      style="white-space:pre-wrap;word-break:break-all"></pre>
+    <p style="margin:6px 0 0"><button class="btnlink" type="button" data-inst="${i}">Copy</button></p>
+  `).join('');
+  INSTALL_HOSTS.forEach(([host], i) => { $(`inst-${i}`).textContent = installLine(host); });
+  $('installlines').querySelectorAll('[data-inst]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const line = $(`inst-${btn.dataset.inst}`).textContent;
+      try {
+        await navigator.clipboard.writeText(line);
+        const prior = btn.textContent;
+        btn.textContent = 'Copied';
+        setTimeout(() => { btn.textContent = prior; }, 1800);
+      } catch { announce('Copy failed — select the line instead.'); }
+    });
   });
+  $('installnote').textContent =
+    'Production is https://onebrain.apxlbz.com/agent-install.sh. ' +
+    'Dev is the same command from https://onebrain-dev.apxlbz.com/agent-install.sh.';
   let mintedToken = '';
   $('mintgo').addEventListener('click', async () => {
     if (!confirm('Mint a personal token? Any previous token of yours stops '
@@ -1080,10 +1106,9 @@ async function viewSettings(root) {
       mintedToken = res.token;
       out.style.display = 'block';
       out.textContent =
-        `# ~/.config/onebrain/config — for the capture hook\n` +
-        `ONEBRAIN_URL=${FN}/api\n` +
-        `ONEBRAIN_TOKEN=${res.token}\n\n` +
-        `# shown once — minting again replaces it`;
+        `export ONEBRAIN_API_KEY='${res.token}'\n\n` +
+        `# shown once — minting again replaces it\n` +
+        `# then copy an install line below`;
       $('mintcopyrow').style.display = 'block';
       announce('Token minted — shown once, copy it now.');
       btn.textContent = 'Mint again';
@@ -1251,7 +1276,7 @@ async function viewUsage(root) {
             <td>${esc(REASON[r.reason] || r.reason)}</td>
             <td class="tight num">${Number(r.delta_usd) >= 0 ? '+' : ''}${usd(r.delta_usd)}</td>
           </tr>`).join('')}</tbody></table>`
-        : '<p class="dim">No credits yet — the trial lands on first setup.</p>'}
+        : '<p class="dim">No credits yet — the trial lands when the memory is created.</p>'}
     </section>`;
 
   $('bill-act').addEventListener('click', async () => {
@@ -1304,37 +1329,7 @@ const VIEWS = {
 
 const go = (hash) => { location.hash = hash; };
 
-/* An org that has never completed setup lands on the wizard instead of an
- * Overview full of zeroes with no explanation. Deliberately a ONE-TIME redirect
- * held in memory, not a hard gate: once it has fired, every other tab stays
- * reachable, so a half-configured org can still look at what it does have. A
- * loop that kept forcing you back to setup would be a trap, not a guide. */
-let setupRedirectDone = false;
-
-async function maybeForceSetup() {
-  /* "Skip for now" must actually skip. The guard above only lives inside one
-   * page load, so the wizard's Skip link (a fresh /app load) used to bounce
-   * straight back to /onboarding — a loop, which is exactly the trap this was
-   * written not to be. The skip arrives as ?skip=1 and is remembered for the
-   * browser session; the wizard still greets them on their next visit. */
-  if (sessionStorage.getItem('ob_skipped') === '1') return false;
-  if (new URLSearchParams(location.search).has('skip')) {
-    sessionStorage.setItem('ob_skipped', '1');
-    history.replaceState(null, '', location.pathname + location.hash);
-    return false;
-  }
-  if (setupRedirectDone) return false;
-  setupRedirectDone = true;
-  if (location.hash && location.hash !== '#overview') return false;
-  try {
-    const ob = await api('/v1/onboarding');
-    if (ob && !ob.completed_at) { location.href = './onboard.html'; return true; }
-  } catch { /* never block the dashboard on this */ }
-  return false;
-}
-
 async function route() {
-  if (await maybeForceSetup()) return;   // the hash change re-enters route()
   const raw = (location.hash || '#overview').slice(1);
   const [name, query] = raw.split('?');
   const key = VIEWS[name] ? name : 'overview';

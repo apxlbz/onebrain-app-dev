@@ -9,14 +9,14 @@
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://onebrain.apxlbz.com/install.html" />
 <meta property="og:title" content="OneBrain — install" />
-<meta property="og:description" content="Connect Claude, Cursor, VS Code, Windsurf, Codex, Zed and any other MCP client to OneBrain. One address, no secrets — each client signs in with Google the first time it connects." />
+<meta property="og:description" content="Mint a OneBrain token, then copy one install line for Claude Code, Cursor, Codex, any MCP client, or plain REST. Dev uses the same command from onebrain-dev." />
 <meta property="og:image" content="https://onebrain.apxlbz.com/og-image.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:image" content="https://onebrain.apxlbz.com/og-image.png" />
 <title>OneBrain — install</title>
-<meta name="description" content="Connect Claude, Cursor, VS Code, Windsurf, Codex, Zed and any other MCP client to OneBrain. One address, no secrets — each client signs in with Google the first time it connects." />
+<meta name="description" content="Mint a OneBrain token, then copy one install line for Claude Code, Cursor, Codex, any MCP client, or plain REST. Dev uses the same command from onebrain-dev." />
 <style>
   :root{--paper:#f6f3f1;--ink:#1f1d1a;--muted:#6f6a61;--lake:#2b59d1;--line:#e4ded6;--sunk:#efeae7;
     --serif:"Source Serif 4",Georgia,serif;
@@ -51,16 +51,26 @@
 <main>
   <p class="muted"><a href="./index.html">&larr; OneBrain</a></p>
   <h1>Install OneBrain</h1>
-  <p class="lede">One address, <code translate="no" data-mcp-url>__MCP_URL__</code>,
-    works in every client below. Nothing here carries a token or secret of any
-    kind &mdash; the first connection from a new client opens a Google sign-in
-    (OAuth&nbsp;2.1), the same way <a href="./docs.html#connect">Claude&rsquo;s
-    own connectors</a> work. Paste the address, click the button, or run the
-    command; sign in once when asked.</p>
+  <p class="lede">Mint a personal token, then copy one line. No wizard.
+    Each line runs the live <code translate="no">agent-install.sh</code> for
+    this site. The key stays in <code translate="no">ONEBRAIN_API_KEY</code>
+    and is not written into the host config.</p>
+  <p class="note">Sign in, then <b>Settings &rarr; Connect your tools &rarr; Mint my token</b>.
+    Production is <code translate="no">https://onebrain.apxlbz.com/agent-install.sh</code>.
+    Dev is the same command from
+    <code translate="no">https://onebrain-dev.apxlbz.com/agent-install.sh</code>.</p>
+  <div id="agent-lines"></div>
+
+  <h2>Clients that sign in themselves</h2>
+  <p class="lede">These clients can open a Google sign-in on first connect.
+    The address is <code translate="no" data-mcp-url>__MCP_URL__</code>.
+    Nothing in this section carries a token. See
+    <a href="./docs.html#connect">Connect to Claude</a>.</p>
 
   <div class="client">
     <h2>Claude Code</h2>
-    <p>One command in a terminal.</p>
+    <p>Without a token: one command, then a Google sign-in on first use.
+      The install line above is the one to copy.</p>
     <div class="snip">
       <pre id="s-code" translate="no"></pre>
       <button type="button" class="copybtn" data-copy="s-code">Copy</button>
@@ -161,6 +171,6 @@
     <a href="mailto:or@apxlbz.com">or@apxlbz.com</a></p>
 </main>
 
-<script type="module" src="./install.js?v=1"></script>
+<script type="module" src="./install.js?v=2"></script>
 </body>
 </html>

@@ -46,20 +46,21 @@
   </nav>
 
   <h2 id="quickstart">Quickstart</h2>
-  <p class="muted">Install to a real cross-agent result in under five
-    minutes &mdash; every command below is copy-paste, nothing to configure
-    first.</p>
+  <p class="muted">Mint a token, copy one line, then a real cross-agent result.
+    No wizard.</p>
   <ol>
     <li>Sign in at <a href="https://onebrain.apxlbz.com">onebrain.apxlbz.com</a>
-      with Google. A personal memory exists immediately &mdash; no setup, no
-      source connections, no API keys.</li>
-    <li>Connect an agent, for example Claude Code:
-      <pre>claude mcp add --transport http onebrain https://qlpfjeciekaqzribxlnp.supabase.co/functions/v1/mcp</pre>
-      run <code>/mcp</code>, choose <b>onebrain</b>, and approve the Google
-      sign-in. See <a href="#connect">Connect OneBrain to Claude</a> for every
-      client, <a href="#other">Other assistants</a> for everything else, or
-      <a href="./install.html">the install page</a> for one-click links and
-      ready-to-paste config for every client at once.</li>
+      with Google. A personal memory exists immediately.</li>
+    <li>Open <b>Settings &rarr; Connect your tools</b> and press
+      <b>Mint my token</b>. Export it as <code>ONEBRAIN_API_KEY</code>.
+      An agent that already holds your session JWT mints the same token with
+      <code>POST /v1/me/token</code>.</li>
+    <li>One line per host. Claude Code:
+      <pre>curl -fsSL https://onebrain.apxlbz.com/agent-install.sh | ONEBRAIN_API_KEY="$ONEBRAIN_API_KEY" bash -s -- claude-code</pre>
+      The same script takes <code>cursor</code>, <code>codex</code>,
+      <code>mcp</code>, or <code>rest</code>. Dev is the same command from
+      <code>https://onebrain-dev.apxlbz.com/agent-install.sh</code>.
+      The <a href="./install.html">install page</a> has every line, ready to copy.</li>
     <li>Tell one agent something (&ldquo;remember that launch moved to
       October 14&rdquo;), then ask a <i>different</i> agent about it. Same
       memory, every agent.</li>
@@ -87,13 +88,14 @@
     file every connected agent follows.</p>
 
   <h2 id="connect">Connect OneBrain to Claude</h2>
-  <p>OneBrain is a remote MCP server. Claude connects to it the way it connects to
-    any connector: once, with a Google sign-in.</p>
+  <p>OneBrain is a remote MCP server. Claude Code takes one install line.
+    Claude on the web, desktop, and mobile can add it as a connector and sign
+    in with Google.</p>
   <h3>Before you start</h3>
   <ol>
     <li>Sign in at <a href="https://onebrain.apxlbz.com">onebrain.apxlbz.com</a>
-      with Google. Your personal memory is ready immediately &mdash; there is
-      nothing else to set up.</li>
+      with Google, then mint a token under <b>Settings &rarr; Connect your tools</b>.
+      Your personal memory is ready immediately.</li>
   </ol>
   <h3>Claude on the web, Claude Desktop, and mobile</h3>
   <ol>
@@ -107,12 +109,12 @@
       connection alive after that.</li>
   </ol>
   <h3>Claude Code</h3>
-  <pre>claude mcp add --transport http onebrain https://qlpfjeciekaqzribxlnp.supabase.co/functions/v1/mcp</pre>
-  <p>On first use, run <code>/mcp</code>, choose <b>onebrain</b>, and approve the
-    Google sign-in. The setup wizard&rsquo;s Done step also offers a one-line
-    installer that adds the tools, turns on automatic memory hooks (recall before
-    every prompt, remember after every session), and connects Claude Desktop on
-    the same machine, using a personal token instead of a sign-in.</p>
+  <pre>curl -fsSL https://onebrain.apxlbz.com/agent-install.sh | ONEBRAIN_API_KEY="$ONEBRAIN_API_KEY" bash -s -- claude-code</pre>
+  <p>Mint the token first (<b>Settings &rarr; Connect your tools &rarr; Mint my token</b>)
+    and export it as <code>ONEBRAIN_API_KEY</code>. The script does not write the
+    secret into Claude&rsquo;s config. Dev is the same command from
+    <code>https://onebrain-dev.apxlbz.com/agent-install.sh</code>.
+    Claude on the web uses the connector steps above and does not need the token.</p>
 
   <h2 id="tools">Tools</h2>
   <table>
@@ -144,14 +146,14 @@
   </ul>
 
   <h2 id="other">Other assistants</h2>
-  <p>Any MCP client that speaks streamable HTTP takes the same address.
-    <a href="./install.html">The install page</a> has one-click links and
-    ready-to-paste config for Cursor, VS&nbsp;Code, Windsurf, Codex, Zed,
-    Gemini CLI and anything else &mdash; no sign-in and no secret required,
-    since OAuth handles the connection the first time each client connects.
-    Scripts and hooks that can&rsquo;t do OAuth authenticate with a personal
-    token, minted on Settings, sent as
-    <code>Authorization: Bearer &lt;token&gt;</code>.</p>
+  <p>The same install script covers Cursor, Codex, any MCP client, and plain REST.
+    Swap the last word: <code>cursor</code>, <code>codex</code>, <code>mcp</code>,
+    <code>rest</code>. <a href="./install.html">The install page</a> has each
+    line ready to copy, plus the Google sign-in snippets for clients that open
+    a browser themselves (VS&nbsp;Code, Windsurf, Zed, Gemini CLI). The token
+    is minted on Settings and exported as <code>ONEBRAIN_API_KEY</code>; it is
+    sent as <code>Authorization: Bearer</code> by the host, and it is not
+    written into the config file.</p>
   <p>Calling the REST endpoints directly from a script or hook? See the
     <a href="./api-reference.html">API reference</a> &mdash; generated live from
     the API&rsquo;s own OpenAPI spec, with a &ldquo;Try it&rdquo; panel for every
@@ -646,8 +648,8 @@
 
   <h2 id="faq">FAQ</h2>
   <h3>Is this a team tool or a personal one?</h3>
-  <p>Personal, by default: every sign-in gets its own private memory, and no
-    setup is required to start using it. Organizations that already share a
+  <p>Personal, by default: every sign-in gets its own private memory. The way in
+    is one token plus one install line. Organizations that already share a
     domain memory keep it as an opt-in shared space.</p>
   <h3>Does OneBrain read my Gmail, Calendar or Trello automatically?</h3>
   <p>No. Automatic ingestion from third-party sources is currently off.
@@ -656,7 +658,7 @@
     import tool.</p>
   <h3>Can two of my agents see the same memory?</h3>
   <p>Yes &mdash; that is the point. Connect Claude, ChatGPT, Cursor, or any
-    MCP-capable agent to the same endpoint and sign-in; what one
+    MCP-capable agent with one personal token and one install line; what one
     <code>remember</code>s, the others can <code>recall</code>.</p>
   <h3>Can a coworker read my memory?</h3>
   <p>No, unless you were already part of a shared domain space before the

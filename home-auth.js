@@ -6,18 +6,28 @@
  * "Open OneBrain" — because a home page that vanishes the moment you are
  * logged in is a page nobody can ever show a colleague. The one exception is
  * the return leg of Google sign-in itself: that visit exists only to land you
- * in the product, so it routes onward (unfinished org -> setup, else
- * dashboard). */
+ * in the product, on Settings, where minting a token and copying an install
+ * line is the whole setup. The Google-sources wizard is never the front door. */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { FN, SUPA_ORIGIN } from "./env.js?v=1";
 
-// Per-environment endpoints for the "Wire it up" snippets.
+// Per-environment endpoints for the "Wire it up" snippets. The install script
+// follows the same hostname split as env.js: prod host → prod script, every
+// other host → the dev script, which matches the dev project a minted token
+// belongs to.
 const MCP = `${SUPA_ORIGIN}/functions/v1/mcp`;
 const API = `${SUPA_ORIGIN}/functions/v1/api`;
+const INSTALL_SH = location.hostname === "onebrain.apxlbz.com"
+  ? "https://onebrain.apxlbz.com/agent-install.sh"
+  : "https://onebrain-dev.apxlbz.com/agent-install.sh";
 document.querySelectorAll("[data-mcp-url]").forEach((el) => { el.textContent = MCP; });
 document.querySelectorAll("[data-api-url]").forEach((el) => { el.textContent = API; });
+document.querySelectorAll("[data-install-sh]").forEach((el) => { el.textContent = INSTALL_SH; });
 document.querySelectorAll("[data-copy]").forEach((el) => {
-  el.dataset.copy = el.dataset.copy.replace(/__MCP_URL__/g, MCP).replace(/__API_URL__/g, API);
+  el.dataset.copy = el.dataset.copy
+    .replace(/__MCP_URL__/g, MCP)
+    .replace(/__API_URL__/g, API)
+    .replace(/__INSTALL_SH__/g, INSTALL_SH);
 });
 
 const returning = /access_token=|provider_token=/.test(location.hash);
@@ -25,12 +35,11 @@ const buttons = [...document.querySelectorAll("[data-signin]")];
 const cfg = await fetch(`${FN}/api/config`).then((r) => r.json());
 const sb = createClient(cfg.supabase_url, cfg.supabase_anon_key);
 
-async function destination() {
-  try {
-    const { data: ob } = await sb.from("onboarding").select("completed_at").maybeSingle();
-    return ob?.completed_at ? "./app.html" : "./onboard.html";
-  } catch { return "./app.html"; }
-}
+// Fresh Google sign-in lands on Settings (mint + copy). An existing session
+// opening the product from the home page goes to the dashboard. Neither path
+// consults onboarding state — agents and people are never sent through the wizard.
+const DASHBOARD = "./app.html";
+const CONNECT = "./app.html#settings";
 
 function showSignedIn(dest) {
   for (const b of buttons) {
@@ -53,9 +62,8 @@ buttons.forEach((b) => b.addEventListener("click", async (e) => {
 
 const { data: { session } } = await sb.auth.getSession();
 if (session) {
-  const dest = await destination();
-  if (returning) { location.replace(dest); } else { showSignedIn(dest); }
+  if (returning) { location.replace(CONNECT); } else { showSignedIn(DASHBOARD); }
 } else if (returning) {
   // The hash is being consumed by supabase-js; route once the session lands.
-  sb.auth.onAuthStateChange(async (_e, s) => { if (s) location.replace(await destination()); });
+  sb.auth.onAuthStateChange((_e, s) => { if (s) location.replace(CONNECT); });
 }

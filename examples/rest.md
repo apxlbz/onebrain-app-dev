@@ -58,6 +58,8 @@ curl -fsS -X POST "$ONEBRAIN_API_URL/v1/recall" \
 
 `POST /v1/forget` takes `{"id":["<id from recall>"]}`. `list_memory` is MCP-only.
 
+The recall JSON also carries `handoff`, `briefing`, `superseded`, and `conflicts`. Read those fields: a superseded fact is not current, and a conflict is two current facts that disagree. `degraded` containing `signals` means they were not checked.
+
 ## If it fails
 
 - HTTP 401 `Missing or invalid credentials` — set `ONEBRAIN_API_KEY` to a live `ob_` token for this API base. Mint: `POST $ONEBRAIN_API_URL/v1/me/token` with `Authorization: Bearer $ONEBRAIN_SESSION_JWT`.

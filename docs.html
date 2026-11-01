@@ -36,6 +36,7 @@
   <p class="muted">One memory, shared across every AI agent you use.
     Questions: <a href="mailto:or@apxlbz.com">or@apxlbz.com</a></p>
   <nav class="toc">
+    <a href="#agents">Agents</a>
     <a href="#quickstart">Quickstart</a><a href="#what">What it is</a>
     <a href="#connect">Connect to Claude</a><a href="#tools">Tools</a>
     <a href="#other">Other assistants</a><a href="./api-reference.html">API reference</a>
@@ -45,9 +46,60 @@
     <a href="#trouble">Troubleshooting</a>
   </nav>
 
+  <h2 id="agents">For agents</h2>
+  <p class="muted">Mint one personal token, copy one line. No wizard.
+    The same contract, as a file an agent can fetch:
+    <a href="./llms.txt">llms.txt</a> and
+    <a href="./llms-full.txt">llms-full.txt</a>.</p>
+  <p>Auth is the environment variable <code>ONEBRAIN_API_KEY</code>
+    (<code>ONEBRAIN_TOKEN</code> is the same key). Send
+    <code>Authorization: Bearer $ONEBRAIN_API_KEY</code>.
+    A static key cannot mint another one. Minting again replaces the previous
+    token. A token from production does not work on dev.</p>
+  <pre>Production API  https://qlpfjeciekaqzribxlnp.supabase.co/functions/v1/api
+Production MCP  https://qlpfjeciekaqzribxlnp.supabase.co/functions/v1/mcp
+Production install  https://onebrain.apxlbz.com/agent-install.sh
+Dev API  https://epjkzltwyfexiunbmbel.supabase.co/functions/v1/api
+Dev MCP  https://epjkzltwyfexiunbmbel.supabase.co/functions/v1/mcp
+Dev install  https://onebrain-dev.apxlbz.com/agent-install.sh</pre>
+  <h3>Mint</h3>
+  <p>Browser: sign in, then <b>Settings &rarr; Connect your tools &rarr; Mint my token</b>.
+    Or, with that person&rsquo;s session JWT already in
+    <code>ONEBRAIN_SESSION_JWT</code>:</p>
+  <pre>ONEBRAIN_API_KEY=$(curl -fsS -X POST \
+  "https://qlpfjeciekaqzribxlnp.supabase.co/functions/v1/api/v1/me/token" \
+  -H "Authorization: Bearer $ONEBRAIN_SESSION_JWT" \
+  | python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])')</pre>
+  <p class="muted">Dev posts to
+    <code>https://epjkzltwyfexiunbmbel.supabase.co/functions/v1/api/v1/me/token</code>.
+    Read the JSON field <code>token</code> and export it. OneBrain keeps only the hash.</p>
+  <h3>Install</h3>
+  <p>One line per host. Swap the last word. The script does not write the secret
+    into the config. Export <code>ONEBRAIN_API_KEY</code> in the environment
+    that launches the host.</p>
+  <pre>curl -fsSL https://onebrain.apxlbz.com/agent-install.sh | ONEBRAIN_API_KEY="$ONEBRAIN_API_KEY" bash -s -- claude-code
+curl -fsSL https://onebrain.apxlbz.com/agent-install.sh | ONEBRAIN_API_KEY="$ONEBRAIN_API_KEY" bash -s -- cursor
+curl -fsSL https://onebrain.apxlbz.com/agent-install.sh | ONEBRAIN_API_KEY="$ONEBRAIN_API_KEY" bash -s -- codex
+curl -fsSL https://onebrain.apxlbz.com/agent-install.sh | ONEBRAIN_API_KEY="$ONEBRAIN_API_KEY" bash -s -- mcp
+curl -fsSL https://onebrain.apxlbz.com/agent-install.sh | ONEBRAIN_API_KEY="$ONEBRAIN_API_KEY" bash -s -- rest</pre>
+  <p class="muted">Dev is the same five lines from
+    <code>https://onebrain-dev.apxlbz.com/agent-install.sh</code>.
+    What each host writes:
+    <a href="./examples/claude-code.md">Claude Code</a>,
+    <a href="./examples/cursor.md">Cursor</a>,
+    <a href="./examples/codex.md">Codex</a>,
+    <a href="./examples/mcp.md">any other MCP client</a>,
+    <a href="./examples/rest.md">REST</a>.
+    OpenClaw is not its own host; use <code>mcp</code> or <code>rest</code>.</p>
+  <p>Personal memory tools: <code>recall</code>, <code>remember</code>,
+    <code>forget</code>, <code>list_memory</code>. REST twins are
+    <code>POST /v1/recall</code>, <code>POST /v1/remember</code>,
+    <code>POST /v1/forget</code>. <code>list_memory</code> is MCP-only.</p>
+
   <h2 id="quickstart">Quickstart</h2>
   <p class="muted">Mint a token, copy one line, then a real cross-agent result.
-    No wizard.</p>
+    No wizard. Agents: start at <a href="#agents">For agents</a>
+    or <a href="./llms.txt">llms.txt</a>.</p>
   <ol>
     <li>Sign in at <a href="https://onebrain.apxlbz.com">onebrain.apxlbz.com</a>
       with Google. A personal memory exists immediately.</li>
@@ -504,8 +556,11 @@
   "member": "jordan@acme.com",
   "note": "shown once — minting again replaces this token"
 }</pre>
-  <p class="muted">Store <code>token</code> immediately; OneBrain keeps only
-    its SHA-256 hash and cannot show it again.</p>
+  <p class="muted">Store <code>token</code> immediately and export it as
+    <code>ONEBRAIN_API_KEY</code>. OneBrain keeps only its SHA-256 hash and
+    cannot show it again. A 401 that starts with <code>Mint failed:</code>
+    means the bearer was a static key: retry with
+    <code>ONEBRAIN_SESSION_JWT</code>. The body names the URL.</p>
 
   <h2 id="architecture">Architecture</h2>
   <p>OneBrain runs entirely on <b>Supabase</b>: Postgres with <code>pgvector</code>
@@ -718,14 +773,23 @@
       <td>Purge/reset need the organization&rsquo;s exact display name (or
         email, for a personal namespace) retyped as confirmation &mdash; copy
         it verbatim.</td></tr>
-    <tr><td>401</td><td><code>Send Authorization: Bearer &lt;token&gt;
-      &hellip;</code></td>
-      <td>Attach a valid bearer token: a personal token (Settings, or
-        <code>POST /v1/me/token</code>) or a Supabase session token.</td></tr>
+    <tr><td>401</td><td><code>Missing or invalid credentials</code></td>
+      <td>Send <code>Authorization: Bearer $ONEBRAIN_API_KEY</code>
+        (an <code>ob_…</code> token). The body names the mint URL for this
+        project (<code>POST /v1/me/token</code> with
+        <code>ONEBRAIN_SESSION_JWT</code>) and the install line. A missing
+        bearer and a bearer that does not resolve look the same.</td></tr>
     <tr><td>401</td><td><code>authorization required</code> (MCP)</td>
-      <td>Your MCP client needs to complete OAuth discovery and sign-in; most
-        clients do this automatically from the response&rsquo;s
-        <code>WWW-Authenticate</code> header.</td></tr>
+      <td>Same fix as the row above. OAuth clients can still follow
+        <code>WWW-Authenticate</code>. An agent that holds
+        <code>ONEBRAIN_API_KEY</code> should send that bearer instead of
+        starting a new sign-in.</td></tr>
+    <tr><td>401</td><td><code>Mint failed:</code></td>
+      <td>The mint call used a static <code>ONEBRAIN_API_KEY</code>.
+        Retry <code>POST /v1/me/token</code> with
+        <code>Authorization: Bearer $ONEBRAIN_SESSION_JWT</code>,
+        or use Settings &rarr; Connect your tools &rarr; Mint my token.
+        Minting again replaces the previous token.</td></tr>
     <tr><td>402</td><td><code>out of platform credits &hellip;</code></td>
       <td>Choose a plan or top up credit in Settings &rarr; Billing.</td></tr>
     <tr><td>402</td><td><code>free-tier fact limit reached &hellip;</code></td>
@@ -782,6 +846,20 @@
 
   <h2 id="trouble">Troubleshooting</h2>
   <ul>
+    <li><b><code>ONEBRAIN_API_KEY is required</code>.</b> The shell that ran
+      <code>agent-install.sh</code> did not have the variable. Export
+      <code>ONEBRAIN_API_KEY</code> (or <code>ONEBRAIN_TOKEN</code>, the same
+      key) in that process and re-run. The error prints the mint command for
+      the API it resolved.</li>
+    <li><b><code>unknown host</code>.</b> The last argument must be exactly one
+      of <code>claude-code</code>, <code>cursor</code>, <code>codex</code>,
+      <code>mcp</code>, <code>rest</code>. The script exits 2 and reprints the
+      command.</li>
+    <li><b>HTTP 401, missing or invalid key.</b> Mint on the same project you
+      are calling. Production and dev tokens are not interchangeable. The
+      response body has the mint URL and the install line.</li>
+    <li><b><code>Mint failed</code>.</b> <code>POST /v1/me/token</code> was
+      called with the <code>ob_</code> key. Call it again with the session JWT.</li>
     <li><b>&ldquo;Couldn&rsquo;t reach the MCP server.&rdquo;</b> Check the address
       ends in <code>/functions/v1/mcp</code> with no trailing slash.</li>
     <li><b>The sign-in loops.</b> Sign in at onebrain.apxlbz.com first with the

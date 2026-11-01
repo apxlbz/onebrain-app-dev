@@ -45,8 +45,13 @@ Usage: ONEBRAIN_API_KEY=ob_… bash agent-install.sh <host>
 
 The config references ONEBRAIN_API_KEY; it does not store the secret.
 Export that variable in the environment that launches the host.
-Re-running replaces only the onebrain entry.
 ONEBRAIN_TOKEN is accepted as another name for the same key.
+Re-running replaces only the onebrain entry.
+
+The last argument must be exactly one of: claude-code, cursor, codex, mcp, rest.
+  curl -fsSL https://onebrain.apxlbz.com/agent-install.sh | ONEBRAIN_API_KEY="$ONEBRAIN_API_KEY" bash -s -- claude-code
+Dev is the same command from https://onebrain-dev.apxlbz.com/agent-install.sh.
+Agent docs: https://onebrain.apxlbz.com/llms.txt
 EOF
   exit 2
 }
@@ -63,7 +68,7 @@ case "$1" in
   rest) HOST="rest" ;;
   -h|--help|help) usage ;;
   *)
-    echo "unknown host: $1" >&2
+    echo "unknown host: $1 — use exactly one of: claude-code, cursor, codex, mcp, rest." >&2
     usage
     ;;
 esac
@@ -102,22 +107,27 @@ REGION="${ONEBRAIN_REGION:-ap-southeast-1}"
 KEY="${ONEBRAIN_API_KEY:-${ONEBRAIN_TOKEN:-}}"
 if [ -z "$KEY" ]; then
   cat >&2 <<EOF
-ONEBRAIN_API_KEY is required.
+ONEBRAIN_API_KEY is required (ONEBRAIN_TOKEN is the same key).
+Export it in this process and re-run the same command.
 
-Mint one. This needs a signed-in session JWT — a static key cannot mint
-another one. Minting again replaces the previous token.
+Mint one with a signed-in session JWT. A static key cannot mint another
+one. Minting again replaces the previous token. Read the JSON field token.
 
   ONEBRAIN_API_KEY=\$(curl -fsS -X POST "$API/v1/me/token" \\
     -H "Authorization: Bearer \$ONEBRAIN_SESSION_JWT" \\
     | python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])')
 
-Or, in the browser: Settings → Connect your tools → Mint my token.
+Browser, same project as that API: Settings → Connect your tools → Mint my token.
+Production: https://onebrain.apxlbz.com
+Dev: https://onebrain-dev.apxlbz.com
+Agent docs: https://onebrain.apxlbz.com/llms.txt
 EOF
   exit 1
 fi
 case "$KEY" in
   *[[:space:]]*)
-    echo "ONEBRAIN_API_KEY must be a single token with no whitespace" >&2
+    echo "ONEBRAIN_API_KEY must be a single token with no whitespace." >&2
+    echo "Re-export it as ONEBRAIN_API_KEY='ob_…' with no spaces and no extra line, then re-run." >&2
     exit 1
     ;;
 esac
@@ -152,7 +162,10 @@ def check_region(value: str) -> None:
     if not value or any(c in value for c in ' \t\r\n"\\') or not all(
         ch.isalnum() or ch in "._-" for ch in value
     ):
-        die(f"ONEBRAIN_REGION is not a single region token: {value!r}")
+        die(
+            f"ONEBRAIN_REGION is not a single region token: {value!r}. "
+            "Use a value like ap-southeast-1 (the default) with no spaces, then re-run."
+        )
 
 check_url("MCP URL", mcp)
 check_url("API URL", api)
@@ -213,7 +226,11 @@ def merge_mcp_json(path: pathlib.Path, entry: dict) -> None:
         try:
             doc = json.loads(path.read_text())
         except json.JSONDecodeError as exc:
-            die(f"refusing to edit {path}: invalid JSON ({exc})")
+            die(
+                f"refusing to edit {path}: invalid JSON ({exc}). "
+                "Fix that file or move it aside, then re-run this command. "
+                "OneBrain does not overwrite a file it cannot parse."
+            )
         if not isinstance(doc, dict):
             die(f"refusing to edit {path}: top-level JSON must be an object")
     else:
@@ -274,7 +291,11 @@ def merge_codex(path: pathlib.Path) -> None:
         try:
             tomllib.loads(existing or "")
         except tomllib.TOMLDecodeError as exc:
-            die(f"refusing to edit {path}: invalid TOML ({exc})")
+            die(
+                f"refusing to edit {path}: invalid TOML ({exc}). "
+                "Fix that file or move it aside, then re-run this command. "
+                "OneBrain does not overwrite a file it cannot parse."
+            )
     base = strip_onebrain(existing).rstrip()
     data = (base + "\n\n" + codex_block()) if base else codex_block()
     try:
@@ -308,7 +329,10 @@ elif host == "rest":
     path = xdg / "onebrain" / "rest.env"
     merge_rest(path)
 else:
-    die(f"unknown host: {host}")
+    die(
+        f"unknown host: {host} — use exactly one of: "
+        "claude-code, cursor, codex, mcp, rest."
+    )
 
 print(f"onebrain: wired {host} -> {path}", file=sys.stderr)
 json.dump({

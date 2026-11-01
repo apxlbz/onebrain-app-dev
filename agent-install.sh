@@ -160,6 +160,12 @@ check_region(region)
 
 AUTH = "Bearer ${ONEBRAIN_API_KEY}"
 CURSOR_AUTH = "Bearer ${env:ONEBRAIN_API_KEY}"
+
+def host_headers(auth: str) -> dict:
+    # x-onebrain-host is the install target. The server records it as the
+    # write's client. It is not a secret and not required for a write to succeed.
+    return {"Authorization": auth, "x-region": region, "x-onebrain-host": host}
+
 BEGIN = "# BEGIN onebrain agent-install"
 END = "# END onebrain agent-install"
 
@@ -186,13 +192,13 @@ def claude_entry() -> dict:
     return {
         "type": "http",
         "url": mcp,
-        "headers": {"Authorization": AUTH, "x-region": region},
+        "headers": host_headers(AUTH),
     }
 
 def cursor_entry() -> dict:
     return {
         "url": mcp,
-        "headers": {"Authorization": CURSOR_AUTH, "x-region": region},
+        "headers": host_headers(CURSOR_AUTH),
     }
 
 def generic_entry() -> dict:
@@ -255,7 +261,7 @@ def codex_block() -> str:
         "[mcp_servers.onebrain]\n"
         f'url = "{mcp}"\n'
         'bearer_token_env_var = "ONEBRAIN_API_KEY"\n'
-        f'http_headers = {{ "x-region" = "{region}" }}\n'
+        f'http_headers = {{ "x-region" = "{region}", "x-onebrain-host" = "{host}" }}\n'
         f"{END}\n"
     )
 
@@ -282,6 +288,7 @@ def merge_rest(path: pathlib.Path) -> None:
         f"ONEBRAIN_API_URL={api}\n"
         f"ONEBRAIN_MCP_URL={mcp}\n"
         f"ONEBRAIN_REGION={region}\n"
+        f"ONEBRAIN_HOST={host}\n"
     )
     write_if_changed(path, data)
 

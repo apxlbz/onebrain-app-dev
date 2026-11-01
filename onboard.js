@@ -759,7 +759,7 @@ function renderPreview() {
   go.textContent = n ? `Import ${n}` : 'Import';
 }
 
-const BATCH = 20;                      // = IMPORT_BATCH_MAX in _shared/policy.ts
+const IMPORT_BATCH = 20;              // = IMPORT_BATCH_MAX in _shared/policy.ts
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /* Batches to POST /api/v1/import. A 429 from the per-minute write brake (or
@@ -771,7 +771,7 @@ async function runImport() {
   const go = $('im-go'); const out = $('im-out');
   go.disabled = true; $('im-text').disabled = true;
   const total = { stored: 0, duplicates: 0, gated: 0, failed: 0 };
-  const batches = importBatches(parsed, BATCH);
+  const batches = importBatches(parsed, IMPORT_BATCH);
   const n = parsed.items.length;
   let done = 0;
   try {

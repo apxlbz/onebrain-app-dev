@@ -107,7 +107,7 @@ resolve_urls() {
 $(resolve_urls)
 EOF
 
-REGION="${ONEBRAIN_REGION:-ap-southeast-1}"
+REGION="${ONEBRAIN_REGION:-ap-northeast-1}"
 
 KEY="${ONEBRAIN_API_KEY:-${ONEBRAIN_TOKEN:-}}"
 if [ -z "$KEY" ]; then
@@ -154,7 +154,7 @@ if [ "$HOST" = "cursor" ]; then
   case "$REGION" in
     *[[:space:]]*|*[\"\\]*)
       echo "ONEBRAIN_REGION is not a single region token: ${REGION}" >&2
-      echo "Use a value like ap-southeast-1 (the default) with no spaces, then re-run." >&2
+      echo "Use a value like ap-northeast-1 (the production default) with no spaces, then re-run." >&2
       exit 1
       ;;
   esac
@@ -207,7 +207,7 @@ def check_region(value: str) -> None:
     ):
         die(
             f"ONEBRAIN_REGION is not a single region token: {value!r}. "
-            "Use a value like ap-southeast-1 (the default) with no spaces, then re-run."
+            "Use a value like ap-northeast-1 (the production default) with no spaces, then re-run."
         )
 
 check_url("MCP URL", mcp)
